@@ -1,7 +1,7 @@
 import { createConfig } from "ponder";
 import { http } from "viem";
 
-import { ExampleContractAbi } from "./abis/ExampleContractAbi";
+import { NounsAuctionHouseAbi } from "./abis/NounsAuctionHouseAbi";
 
 export default createConfig({
   networks: {
@@ -11,11 +11,11 @@ export default createConfig({
     },
   },
   contracts: {
-    ExampleContract: {
+    NounsAuctionHouse: {
       network: "mainnet",
-      abi: ExampleContractAbi,
-      address: "0x0000000000000000000000000000000000000000",
-      startBlock: 1234567,
+      abi: NounsAuctionHouseAbi,
+      address: "0x830BD73E4184cef73443C15111a1DF14e495C706",
+      startBlock: 19258213,
     },
   },
 });
