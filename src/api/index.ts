@@ -1,13 +1,34 @@
-import {db} from "ponder:api";
-import schema from "ponder:schema";
-import {Hono} from "hono";
-import {client, graphql} from "ponder";
+import {serve} from '@hono/node-server';
+import app from './api';
+import {setupWebSockets, startNotificationListener} from './websocket';
+import {createDbContext} from '../lib/db';
 
-const app = new Hono();
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
-app.use("/sql/*", client({db, schema}));
+async function start() {
+    const db = createDbContext();
 
-app.use("/", graphql({db, schema}));
-app.use("/graphql", graphql({db, schema}));
+    const {injectWebSocket} = setupWebSockets(app);
+
+    const server = serve({
+        fetch: app.fetch,
+        port: PORT
+    });
+
+    injectWebSocket(server);
+
+    const notificationClient = await startNotificationListener(db);
+
+    console.log(`Server running on http://localhost:${PORT}`);
+
+    return {server, db, notificationClient};
+}
+
+if (require.main === module) {
+    start().catch(error => {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    });
+}
 
 export default app;

@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: nounberg
+      POSTGRES_PASSWORD: nounberg
+      POSTGRES_DB: nounberg
+    ports:
+      - "5432:5432"
+    volumes:
+      - nounberg-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nounberg"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
+      PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
+      DATABASE_SCHEMA: public
+      PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
+      PORT: 3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  workers:
+    build:
+      context: .
+      dockerfile: Dockerfile.workers
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
+      PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
+      DATABASE_SCHEMA: public
+      ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  nounberg-data:
