@@ -7,7 +7,7 @@ export const auctionEvents = onchainTable("auction_events", (t) => ({
 
   type: t.text().notNull(),
   nounId: t.integer().notNull(),
-  txHash: t.text().notNull(),
+  txHash: t.hex().notNull(),
   blockNumber: t.integer().notNull(),
   blockTimestamp: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
@@ -15,13 +15,14 @@ export const auctionEvents = onchainTable("auction_events", (t) => ({
   startTime: t.integer(),
   endTime: t.integer(),
   
-  bidder: t.text(),
+
+  bidder: t.hex(),
   bidderEns: t.text(),
   value: t.numeric(),
   valueUsd: t.numeric(),
   extended: t.boolean(),
-  
-  winner: t.text(),
+
+  winner: t.hex(),
   winnerEns: t.text(),
   amount: t.numeric(),
   amountUsd: t.numeric(),

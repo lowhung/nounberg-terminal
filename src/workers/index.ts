@@ -1,11 +1,13 @@
 import axios from 'axios';
 import {createPublicClient, http} from 'viem';
 import {mainnet} from 'viem/chains';
-import {CacheService} from '../lib/cache';
-import {completeJob, failJob, getNextJob} from '../lib/queue';
+import {CacheService} from '@/lib/cache';
+import {completeJob, failJob, getNextJob} from '@/lib/queue';
 import {processEnrichEventJob} from './processors/event-processor';
-import {createDbClient, createDbPool} from '../lib/db';
+import {createDbClient, createDbPool} from '@/lib/db';
+import os from 'os';
 
+const WORKER_NAME = process.env.WORKER_NAME || `worker-${os.hostname()}-${process.pid}`;
 const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL || process.env.PONDER_RPC_URL_1;
 const WORKER_POLL_INTERVAL = parseInt(process.env.WORKER_POLL_INTERVAL || '1000', 10);
 
@@ -19,26 +21,20 @@ const provider = createPublicClient({
 
 const cacheService = new CacheService(pgPool);
 
-/**
- * Process the next job in the queue
- */
 async function processNextJob(): Promise<void> {
     let client;
     try {
-        client = await pgPool.connect();
+        client = await pgPool.connect();  // Get a connection from the pool
 
         const job = await getNextJob(client);
         if (!job) {
             return;
         }
-        console.log(`Processing job ${job.id} (${job.type}) for event ${job.event_id}`);
 
         let success = false;
-
         if (job.type === 'enrich_event') {
-            success = await processEnrichEventJob(pgClient, job, cacheService, provider, axios);
-        } else {
-            console.warn(`Unknown job type: ${job.type}`);
+            // Pass the pooled client, not the notification client
+            success = await processEnrichEventJob(client, job, cacheService, provider, axios);
         }
 
         if (success) {
@@ -47,10 +43,10 @@ async function processNextJob(): Promise<void> {
             await failJob(client, job.id, 'Job processing failed');
         }
     } catch (error) {
-        console.error('Error processing job:', error);
+        console.error(`[${WORKER_NAME}] Error processing job:`, error);
     } finally {
         if (client) {
-            client.release();
+            client.release();  // Release back to the pool
         }
     }
 }
@@ -61,34 +57,34 @@ async function startWorker(): Promise<void> {
         await pgClient.query('LISTEN new_job');
 
         pgClient.on('notification', async (notification) => {
-            console.log(`Received notification on channel ${notification.channel}: ${notification.payload}`);
+            console.log(`[${WORKER_NAME}] Received notification on channel ${notification.channel}: ${notification.payload}`);
             if (notification.channel === 'new_job') {
                 await processNextJob();
             }
         });
 
-        console.log('Worker started, listening for notifications...');
+        console.log(`[${WORKER_NAME}] Worker started, listening for notifications...`);
+        // TODO: 1) Increase the polling interval when there are no jobs, decrease it when jobs are available
+        // TODO: 2) Process multiple jobs per poll to improve efficiency
+        // TODO: 3) Implement exponential backoff in polling frequency during extended idle periods
         setInterval(processNextJob, WORKER_POLL_INTERVAL);
         await processNextJob();
-
-        // Clean up expired cache entries daily
-        setInterval(() => cacheService.cleanupExpiredEntries(), 24 * 60 * 60 * 1000);
     } catch (error) {
-        console.error('Error starting worker:', error);
+        console.error(`[${WORKER_NAME}] Error starting worker:`, error);
         process.exit(1);
     }
 }
 
 
 process.on('SIGINT', async () => {
-    console.log('Shutting down worker...');
+    console.log(`[${WORKER_NAME}] Shutting down worker...`);
     await pgClient.end();
     await pgPool.end();
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    console.log('Shutting down worker...');
+    console.log(`[${WORKER_NAME}] Shutting down worker...`);
     await pgClient.end();
     await pgPool.end();
     process.exit(0);
@@ -96,6 +92,6 @@ process.on('SIGTERM', async () => {
 
 
 startWorker().catch((error) => {
-    console.error('Fatal error starting worker:', error);
+    console.error(`[${WORKER_NAME}] Fatal error starting worker:`, error);
     process.exit(1);
 });

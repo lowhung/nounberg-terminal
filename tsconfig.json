@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
+    "useUnknownInCatchVariables": false,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
     "module": "ESNext",
@@ -17,7 +18,11 @@
     "paths": {
       "@/generated": [
         "./generated/index.ts"
-      ]
+      ],
+      "@/lib/*": ["./src/lib/*"],
+      "@/api/*": ["./src/api/*"],
+      "@/workers/*": ["./src/workers/*"],
+      "@/types/*": ["./src/types/*"]
     },
     "skipLibCheck": true
   },

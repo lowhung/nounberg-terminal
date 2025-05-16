@@ -10,4 +10,6 @@ RUN npm install
 FROM base AS runtime
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-CMD ["npx","ponder","dev"]
+
+# Start only the Ponder indexer + API, not workers
+CMD ["npx", "ponder", "start"]

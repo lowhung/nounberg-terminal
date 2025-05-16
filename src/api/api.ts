@@ -1,26 +1,27 @@
 import {Hono} from 'hono';
 import {cors} from 'hono/cors';
 import {logger} from 'hono/logger';
-import {createDbContext} from '../lib/db';
+import {createDbContext} from '@/lib/db';
+import {graphql} from "ponder";
+import schema from "ponder:schema";
+import {db} from "ponder:api";
 
-// Initialize the database context
-const db = createDbContext();
+const dbContext = createDbContext();
 
-// Create the Hono app
 const server = new Hono();
 
 server.use('*', cors());
 server.use('*', logger());
+server.use("/graphql", graphql({db, schema}));
 
 server.get('/api/events', async (c) => {
     try {
-        // Extract query parameters
         const cursor = c.req.query('cursor');
         const limitParam = c.req.query('limit');
         const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 10;
         const type = c.req.query('type');
 
-        const result = await db.auctionEvents.getEvents({
+        const result = await dbContext.auctionEvents.getEvents({
             cursor,
             limit,
             type,
@@ -36,7 +37,7 @@ server.get('/api/events', async (c) => {
 process.on('SIGINT', async () => {
     console.log('Shutting down API server...');
     try {
-        await db.close();
+        await dbContext.close();
     } catch (error) {
         console.error('Error during shutdown:', error);
     }
@@ -46,7 +47,7 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
     console.log('Shutting down API server...');
     try {
-        await db.close();
+        await dbContext.close();
     } catch (error) {
         console.error('Error during shutdown:', error);
     }

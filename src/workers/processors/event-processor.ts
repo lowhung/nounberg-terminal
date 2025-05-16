@@ -1,10 +1,10 @@
 import pg from 'pg';
 import {Address, formatEther} from 'viem';
-import {CacheService} from '../../lib/cache';
-import {Job} from '../../lib/queue';
-import {createDbContext} from '../../lib/db';
+import {CacheService} from '@/lib/cache';
+import {Job} from '@/lib/queue';
+import {AuctionEventRepository} from "@/lib/db/repositories/auction-event-repository";
 
-
+// ENS Universal Resolver deployment block
 const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
 
 
@@ -75,17 +75,19 @@ export async function getEthPrice(
 }
 
 export async function processEnrichEventJob(
-    client: pg.Client,
+    client: pg.PoolClient,
     job: Job,
     cacheService: CacheService,
     provider: any,
     axios: any
 ): Promise<boolean> {
     const {event_id: eventId, data} = job;
-    const db = createDbContext();
 
+    // Create a repository using the passed client
+    const auctionEventRepo = new AuctionEventRepository(client);
     try {
-        const event = await db.auctionEvents.getEventById(eventId);
+        // Get the event using the repository
+        const event = await auctionEventRepo.getEventById(eventId);
 
         if (!event) {
             throw new Error(`Event ${eventId} not found`);
@@ -141,7 +143,8 @@ export async function processEnrichEventJob(
                 : `Noun #${event.noun_id} sold for ${ethAmount} Ξ to ${displayName}`;
         }
 
-        await db.auctionEvents.updateEvent(eventId, {
+        // Update the event using the repository
+        await auctionEventRepo.updateEvent(eventId, {
             bidderEns,
             winnerEns,
             valueUsd,
@@ -150,13 +153,11 @@ export async function processEnrichEventJob(
             processedAt: Math.floor(Date.now() / 1000),
         });
 
+        // Notify any listeners about the updated event
         await client.query(`NOTIFY event_updated, '${eventId}'`);
-
-        await db.close();
         return true;
     } catch (error) {
         console.error(`Error processing enrichment job for event ${eventId}:`, error);
-        await db.close();
         return false;
     }
 }

@@ -1,12 +1,17 @@
-import {Pool} from 'pg';
+import {Client, Pool, PoolClient} from 'pg';
 
 export class AuctionEventRepository {
-    private pool: Pool;
+    private poolOrClient: Pool | Client | PoolClient;
+    private schema: string;
 
-    constructor(pool: Pool) {
-        this.pool = pool;
+    constructor(poolOrClient: Pool | Client | PoolClient, schema = 'public') {
+        this.poolOrClient = poolOrClient;
+        this.schema = schema;
     }
 
+    /**
+     * Get paginated auction events with optional filtering
+     */
     async getEvents({
                         cursor,
                         limit = 10,
@@ -16,21 +21,18 @@ export class AuctionEventRepository {
         limit?: number;
         type?: string;
     }) {
-        // Build query
         let query = `
             SELECT *
-            FROM auction_events
+            FROM ${this.schema}.auction_events
             WHERE 1 = 1
         `;
         const params: any[] = [];
 
-        // Filter by type if specified
         if (type) {
             query += ` AND type = $${params.length + 1}`;
             params.push(type);
         }
 
-        // Pagination using cursor (block_timestamp and log_index)
         if (cursor) {
             try {
                 const [timestamp, logIndex] = cursor.split('_').map(Number);
@@ -45,36 +47,66 @@ export class AuctionEventRepository {
         }
 
         query += ` ORDER BY block_timestamp DESC, log_index DESC`;
-
         query += ` LIMIT $${params.length + 1}`;
         params.push(limit);
 
-        const result = await this.pool.query(query, params);
+        try {
+            const result = await this.poolOrClient.query(query, params);
 
-        let nextCursor = null;
-        if (result.rows.length === limit) {
-            const lastItem = result.rows[result.rows.length - 1];
-            nextCursor = `${lastItem.block_timestamp}_${lastItem.log_index}`;
+            let nextCursor = null;
+            if (result.rows.length === limit) {
+                const lastItem = result.rows[result.rows.length - 1];
+                nextCursor = `${lastItem.block_timestamp}_${lastItem.log_index}`;
+            }
+
+            return {
+                events: result.rows,
+                nextCursor,
+                count: result.rows.length
+            };
+        } catch (error) {
+            console.error('Error fetching auction events:', error);
+            throw new Error(`Database error when fetching events: ${error.message}`);
         }
-
-        return {
-            events: result.rows,
-            nextCursor,
-            count: result.rows.length
-        };
     }
 
     async getEventById(id: string) {
-        const result = await this.pool.query(
-            `SELECT *
-             FROM auction_events
-             WHERE id = $1`,
-            [id]
-        );
+        try {
+            let attempts = 0;
+            const maxAttempts = 3;
+            const baseDelay = 500; // 500ms base delay
 
-        return result.rows.length > 0 ? result.rows[0] : null;
+            while (attempts < maxAttempts) {
+                const result = await this.poolOrClient.query(
+                    `SELECT *
+                     FROM ${this.schema}.auction_events
+                     WHERE id = $1`,
+                    [id]
+                );
+
+                if (result.rows.length > 0) {
+                    return result.rows[0];
+                }
+
+                attempts++;
+                if (attempts < maxAttempts) {
+                    const delay = baseDelay * Math.pow(2, attempts - 1);
+                    console.log(`Event ${id} not found, retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+
+            console.warn(`Event ${id} not found after ${maxAttempts} attempts`);
+            return null;
+        } catch (error) {
+            console.error(`Error fetching auction event ${id}:`, error);
+            throw new Error(`Database error when fetching event: ${error.message}`);
+        }
     }
 
+    /**
+     * Update an existing auction event with enriched data
+     */
     async updateEvent(
         id: string,
         data: {
@@ -87,15 +119,16 @@ export class AuctionEventRepository {
         }
     ) {
         try {
-            await this.pool.query(
-                `UPDATE auction_events
+            const result = await this.poolOrClient.query(
+                `UPDATE ${this.schema}.auction_events
                  SET bidder_ens   = COALESCE($1, bidder_ens),
                      winner_ens   = COALESCE($2, winner_ens),
                      value_usd    = COALESCE($3, value_usd),
                      amount_usd   = COALESCE($4, amount_usd),
                      headline     = COALESCE($5, headline),
                      processed_at = COALESCE($6, processed_at)
-                 WHERE id = $7`,
+                 WHERE id = $7
+                 RETURNING *`,  // Return the updated row
                 [
                     data.bidderEns,
                     data.winnerEns,
@@ -106,10 +139,59 @@ export class AuctionEventRepository {
                     id
                 ]
             );
+
+            if (result.rowCount === 0) {
+                console.warn(`No auction event with ID ${id} found to update`);
+                return false;
+            }
+
+            console.log(`Successfully updated auction event ${id}`);
             return true;
         } catch (error) {
             console.error(`Error updating auction event ${id}:`, error);
             return false;
+        }
+    }
+
+    /**
+     * Check if an event exists
+     */
+    async eventExists(id: string): Promise<boolean> {
+        try {
+            const result = await this.poolOrClient.query(
+                `SELECT 1
+                 FROM ${this.schema}.auction_events
+                 WHERE id = $1
+                 LIMIT 1`,
+                [id]
+            );
+            return result.rowCount !== null && result.rowCount > 0;
+        } catch (error) {
+            console.error(`Error checking if event ${id} exists:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Get the count of events by type
+     */
+    async getEventCounts(): Promise<Record<string, number>> {
+        try {
+            const result = await this.poolOrClient.query(
+                `SELECT type, COUNT(*) as count
+                 FROM ${this.schema}.auction_events
+                 GROUP BY type`
+            );
+
+            const counts: Record<string, number> = {};
+            result.rows.forEach(row => {
+                counts[row.type] = parseInt(row.count);
+            });
+
+            return counts;
+        } catch (error) {
+            console.error('Error getting event counts:', error);
+            return {};
         }
     }
 }

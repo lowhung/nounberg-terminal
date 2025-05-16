@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15
@@ -11,15 +13,18 @@ services:
       - nounberg-data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nounberg"]
-      interval: 5s
+      test: [ "CMD-SHELL", "pg_isready -U nounberg || exit 1" ]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
+    restart: always
 
   server:
     build:
       context: .
       dockerfile: Dockerfile.server
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,7 +32,6 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
-      PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
       PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
       PORT: 3000
@@ -39,6 +43,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.workers
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,9 +52,22 @@ services:
       PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
       ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
+      WORKER_JOB_TYPES: "enrich_event"  # Default job type
+      WORKER_NAME: "worker-${HOSTNAME}"
+      WORKER_POLL_INTERVAL: 1000
+      # Add concurrency control
+      WORKER_CONCURRENCY: 2  # Process up to 2 jobs concurrently per worker
     volumes:
       - .:/app
       - /app/node_modules
+    # Use the deployment section to scale workers
+    deploy:
+      replicas: 3  # Start with 3 workers
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
 volumes:
   nounberg-data:
+    name: nounberg-data

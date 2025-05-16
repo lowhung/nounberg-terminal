@@ -13,7 +13,9 @@ CREATE TABLE auction_jobs (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   
   -- Create index for faster job querying
-  CONSTRAINT unique_pending_job UNIQUE (event_id, type, status)
+  -- This makes sure we only have one job per event+type+status combination
+  -- which is particularly important for pending jobs to avoid duplicates
+  CONSTRAINT unique_event_type_status UNIQUE (event_id, type, status)
 );
 
 CREATE INDEX idx_jobs_status ON auction_jobs(status, updated_at);

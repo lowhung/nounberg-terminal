@@ -1,7 +1,7 @@
 import {serve} from '@hono/node-server';
 import app from './api';
 import {setupWebSockets, startNotificationListener} from './websocket';
-import {createDbContext} from '../lib/db';
+import {createDbContext} from '@/lib/db';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 

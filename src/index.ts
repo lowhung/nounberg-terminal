@@ -13,7 +13,7 @@ async function processAuctionEvent(event: any, type: string) {
     const blockTimestamp = event.block.timestamp;
     const logIndex = event.log.logIndex;
 
-    const id = `${txHash}_${logIndex}`;
+    const id = txHash;
 
     return {
         id,
@@ -67,7 +67,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
     await context.db.insert(auctionEvents).values({
         ...eventData,
         nounId: Number(nounId),
-        bidder: sender.toLowerCase(),
+        bidder: sender,
         value: value.toString(),
         extended,
         headline,
@@ -99,7 +99,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
     await context.db.insert(auctionEvents).values({
         ...eventData,
         nounId: Number(nounId),
-        winner: winner.toLowerCase(),
+        winner: winner,
         amount: amount.toString(),
         headline,
         thumbnailUrl,
@@ -107,7 +107,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
 
     await createJob(pgPool, eventData.id, 'enrich_event', {
         blockTimestamp: eventData.blockTimestamp,
-        address: winner.toLowerCase(),
+        address: winner,
         amount: amount.toString()
     });
 

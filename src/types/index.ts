@@ -1,11 +1,5 @@
-/**
- * Auction event types
- */
 export type AuctionEventType = 'created' | 'bid' | 'settled';
 
-/**
- * Base auction event
- */
 export interface AuctionEvent {
     id: string;
     txHash: string;
