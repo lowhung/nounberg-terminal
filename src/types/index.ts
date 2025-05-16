@@ -20,7 +20,7 @@ export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface Job {
     id: number;
-    eventId: string;
+    event_id: string;
     type: JobType;
     status: JobStatus;
     attempts: number;

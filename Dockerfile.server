@@ -7,9 +7,14 @@ COPY package-lock.json .
 FROM base AS dependencies
 RUN npm install
 
-FROM base AS runtime
-COPY --from=dependencies /app/node_modules ./node_modules
+FROM alpine:latest AS filter
+WORKDIR /filter
 COPY . .
+RUN rm -rf src/workers
 
-# Start only the Ponder indexer + API, not workers
+FROM base AS runtime
+WORKDIR /app
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=filter /filter .
+
 CMD ["npx", "ponder", "start"]

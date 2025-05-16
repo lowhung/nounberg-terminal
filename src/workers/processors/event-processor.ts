@@ -1,8 +1,8 @@
 import pg from 'pg';
 import {Address, formatEther} from 'viem';
-import {CacheService} from '@/lib/cache';
-import {Job} from '@/lib/queue';
+import {MemcachedService} from '@/lib/cache';
 import {AuctionEventRepository} from "@/lib/db/repositories/auction-event-repository";
+import {Job} from "@/types/index";
 
 // ENS Universal Resolver deployment block
 const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
@@ -11,7 +11,7 @@ const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
 export async function resolveEns(
     address: string,
     blockNumber: number,
-    cacheService: CacheService,
+    cacheService: MemcachedService,
     provider: any
 ): Promise<string | null> {
     if (!address) return null;
@@ -38,7 +38,7 @@ export async function resolveEns(
 
 export async function getEthPrice(
     timestamp: number,
-    cacheService: CacheService,
+    cacheService: MemcachedService,
     axios: any
 ): Promise<number | null> {
     if (!timestamp) return null;
@@ -77,7 +77,7 @@ export async function getEthPrice(
 export async function processEnrichEventJob(
     client: pg.PoolClient,
     job: Job,
-    cacheService: CacheService,
+    cacheService: MemcachedService,
     provider: any,
     axios: any
 ): Promise<boolean> {

@@ -177,8 +177,6 @@ export async function completeJob(client: Pool | PoolClient, jobId: number): Pro
                AND status != 'completed'`,
             [jobId]
         );
-
-        console.log(`Completed job ${jobId}`);
     } catch (error) {
         if (error.code === '23505') {
             console.warn(`Job ${jobId} completion constraint violation, may already be completed`);

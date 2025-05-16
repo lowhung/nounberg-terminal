@@ -1,12 +1,13 @@
 import {Hono} from 'hono';
 import {cors} from 'hono/cors';
 import {logger} from 'hono/logger';
-import {createDbContext} from '@/lib/db';
+import {createDbContext, createDbPool} from '@/lib/db';
 import {graphql} from "ponder";
 import schema from "ponder:schema";
 import {db} from "ponder:api";
 
 const dbContext = createDbContext();
+const pgPool = createDbPool();
 
 const server = new Hono();
 
@@ -38,6 +39,7 @@ process.on('SIGINT', async () => {
     console.log('Shutting down API server...');
     try {
         await dbContext.close();
+        await pgPool.end();
     } catch (error) {
         console.error('Error during shutdown:', error);
     }
@@ -48,6 +50,7 @@ process.on('SIGTERM', async () => {
     console.log('Shutting down API server...');
     try {
         await dbContext.close();
+        await pgPool.end();
     } catch (error) {
         console.error('Error during shutdown:', error);
     }
