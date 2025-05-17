@@ -64,7 +64,6 @@ async function startWorker(): Promise<void> {
         // TODO: 1) Increase the polling interval when there are no jobs, decrease it when jobs are available
         // TODO: 2) Process multiple jobs per poll to improve efficiency
         // TODO: 3) Implement exponential backoff in polling frequency during extended idle periods
-
         setInterval(processNextJob, WORKER_POLL_INTERVAL);
         await processNextJob();
     } catch (error) {

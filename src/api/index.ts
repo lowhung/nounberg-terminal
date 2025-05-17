@@ -1,34 +1,42 @@
 import {serve} from '@hono/node-server';
 import app from './api';
-import {setupWebSockets, startNotificationListener} from './websocket';
+import {setupWebSockets, startNotificationListener, broadcastMessage} from './websocket';
 import {createDbContext} from '@/lib/db';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 async function start() {
-    const db = createDbContext();
+    try {
+        const db = createDbContext();
+        const {injectWebSocket} = setupWebSockets(app);
 
-    const {injectWebSocket} = setupWebSockets(app);
+        const server = serve({
+            fetch: app.fetch,
+            port: PORT
+        });
 
-    const server = serve({
-        fetch: app.fetch,
-        port: PORT
-    });
+        injectWebSocket(server);
 
-    injectWebSocket(server);
+        const notificationClient = await startNotificationListener(db);
 
-    const notificationClient = await startNotificationListener(db);
+        setTimeout(() => {
+            broadcastMessage({
+                type: 'test',
+                message: 'This is a test message from the server',
+                timestamp: new Date().toISOString()
+            });
+        }, 5000);
 
-    console.log(`Server running on http://localhost:${PORT}`);
-
-    return {server, db, notificationClient};
-}
-
-if (require.main === module) {
-    start().catch(error => {
+        return {server, db, notificationClient};
+    } catch (error) {
         console.error('Failed to start server:', error);
-        process.exit(1);
-    });
+        throw error;
+    }
 }
+
+start().catch(error => {
+    console.error('Fatal error during startup:', error);
+    process.exit(1);
+});
 
 export default app;

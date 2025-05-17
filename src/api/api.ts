@@ -11,7 +11,7 @@ const pgPool = createDbPool();
 
 const server = new Hono();
 
-server.use('*', cors());
+// server.use('*', cors());
 server.use('*', logger());
 server.use("/graphql", graphql({db, schema}));
 

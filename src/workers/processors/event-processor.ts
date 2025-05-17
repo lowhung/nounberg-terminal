@@ -1,78 +1,9 @@
 import pg from 'pg';
-import {Address, formatEther} from 'viem';
+import {formatEther} from 'viem';
 import {MemcachedService} from '@/lib/cache';
 import {AuctionEventRepository} from "@/lib/db/repositories/auction-event-repository";
 import {Job} from "@/types/index";
 
-// ENS Universal Resolver deployment block
-const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
-
-
-export async function resolveEns(
-    address: string,
-    blockNumber: number,
-    cacheService: MemcachedService,
-    provider: any
-): Promise<string | null> {
-    if (!address) return null;
-
-    const cachedEns = await cacheService.getEnsName(address);
-    if (cachedEns !== null) {
-        return cachedEns;
-    }
-
-    if (blockNumber && blockNumber < ENS_UNIVERSAL_RESOLVER_BLOCK) {
-        console.log(`Block ${blockNumber} is before ENS Universal Resolver deployment, skipping ENS resolution for ${address}`);
-        return null;
-    }
-
-    try {
-        const ensName = await provider.getEnsName({address: address as Address});
-        await cacheService.setEnsName(address, ensName);
-        return ensName;
-    } catch (error) {
-        console.error(`Error resolving ENS for ${address}:`, error);
-        return null;
-    }
-}
-
-export async function getEthPrice(
-    timestamp: number,
-    cacheService: MemcachedService,
-    axios: any
-): Promise<number | null> {
-    if (!timestamp) return null;
-
-    const cachedPrice = await cacheService.getEthPrice(timestamp);
-    if (cachedPrice !== null) {
-        return cachedPrice;
-    }
-
-    try {
-        const response = await axios.get(
-            'https://min-api.cryptocompare.com/data/pricehistorical',
-            {
-                params: {
-                    ts: timestamp,
-                    fsym: 'ETH',
-                    tsyms: 'USD',
-                    api_key: '193c7d86141cc605958fee66739113c13a0dbee55f0d66075fa19e7721ceced5'
-                }
-            }
-        );
-
-        const priceUsd = response.data.ETH?.USD;
-        if (priceUsd) {
-            await cacheService.setEthPrice(timestamp, priceUsd, 'cryptocompare');
-            return priceUsd;
-        }
-
-        return null;
-    } catch (error) {
-        console.error(`Error getting ETH price for timestamp ${timestamp}:`, error);
-        return null;
-    }
-}
 
 export async function processEnrichEventJob(
     client: pg.PoolClient,
@@ -81,12 +12,10 @@ export async function processEnrichEventJob(
     provider: any,
     axios: any
 ): Promise<boolean> {
-    const {event_id: eventId, data} = job;
+    const {event_id: eventId} = job;
 
-    // Create a repository using the passed client
     const auctionEventRepo = new AuctionEventRepository(client);
     try {
-        // Get the event using the repository
         const event = await auctionEventRepo.getEventById(eventId);
 
         if (!event) {
@@ -103,7 +32,7 @@ export async function processEnrichEventJob(
 
         if (event.value) {
             const ethValue = parseFloat(formatEther(BigInt(event.value)));
-            const priceUsd = await getEthPrice(blockTimestamp, cacheService, axios);
+            const priceUsd = await cacheService.getEthPrice(blockTimestamp, axios);
 
             if (priceUsd) {
                 valueUsd = ethValue * priceUsd;
@@ -112,7 +41,7 @@ export async function processEnrichEventJob(
 
         if (event.amount) {
             const ethAmount = parseFloat(formatEther(BigInt(event.amount)));
-            const priceUsd = await getEthPrice(blockTimestamp, cacheService, axios);
+            const priceUsd = await cacheService.getEthPrice(blockTimestamp, axios);
 
             if (priceUsd) {
                 amountUsd = ethAmount * priceUsd;
@@ -120,11 +49,11 @@ export async function processEnrichEventJob(
         }
 
         if (event.bidder) {
-            bidderEns = await resolveEns(event.bidder, blockNumber, cacheService, provider);
+            bidderEns = await cacheService.getEnsName(event.bidder, blockNumber, provider);
         }
 
         if (event.winner) {
-            winnerEns = await resolveEns(event.winner, blockNumber, cacheService, provider);
+            winnerEns = await cacheService.getEnsName(event.winner, blockNumber, provider);
         }
 
         if (type === 'bid' && event.value) {
@@ -143,7 +72,6 @@ export async function processEnrichEventJob(
                 : `Noun #${event.noun_id} sold for ${ethAmount} Ξ to ${displayName}`;
         }
 
-        // Update the event using the repository
         await auctionEventRepo.updateEvent(eventId, {
             bidderEns,
             winnerEns,
@@ -153,7 +81,6 @@ export async function processEnrichEventJob(
             processedAt: Math.floor(Date.now() / 1000),
         });
 
-        // Notify any listeners about the updated event
         await client.query(`NOTIFY event_updated, '${eventId}'`);
         return true;
     } catch (error) {

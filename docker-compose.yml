@@ -51,6 +51,16 @@ services:
     volumes:
       - /app/node_modules
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
   workers:
     build:
       context: .

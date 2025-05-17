@@ -1,4 +1,5 @@
 import Memcached from "memcached";
+import {Address} from "viem";
 
 const DEFAULT_TTL = {
     ENS_NAME: 48 * 60 * 60,
@@ -6,6 +7,8 @@ const DEFAULT_TTL = {
     ETH_PRICE_OLD: 6 * 60 * 60,
     ETH_PRICE_HISTORICAL: 30 * 24 * 60 * 60,
 };
+
+const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
 
 /**
  * Service for interacting with Memcached
@@ -45,7 +48,7 @@ export class MemcachedService {
     /**
      * Get a value from memcached
      */
-    get<T>(key: string): Promise<T | null> {
+    private get<T>(key: string): Promise<T | null> {
         return new Promise((resolve, reject) => {
             this.client.get(key, (err, data) => {
                 if (err) {
@@ -61,7 +64,7 @@ export class MemcachedService {
     /**
      * Set a value in memcached
      */
-    set<T>(key: string, value: T, ttl: number): Promise<boolean> {
+    private set<T>(key: string, value: T, ttl: number): Promise<boolean> {
         return new Promise((resolve) => {
             this.client.set(key, value, ttl, (err) => {
                 if (err) {
@@ -98,103 +101,91 @@ export class MemcachedService {
     }
 
     /**
-     * Get an ENS name from the cache
+     * Get an ENS name - fetches from provider if not in cache
      */
-    async getEnsName(address: string): Promise<string | null> {
+    async getEnsName(
+        address: string,
+        blockNumber: number,
+        provider: any
+    ): Promise<string | null> {
         if (!address) return null;
 
         address = address.toLowerCase();
         const key = `ens:${address}`;
 
         try {
-            return await this.get<string>(key);
+            const cached = await this.get<string>(key);
+            if (cached !== null) {
+                return cached;
+            }
+
+            if (blockNumber && blockNumber < ENS_UNIVERSAL_RESOLVER_BLOCK) {
+                console.log(`Block ${blockNumber} is before ENS Universal Resolver deployment, skipping ENS resolution for ${address}`);
+                return null;
+            }
+
+            const ensName = await provider.getEnsName({address: address as Address});
+
+            await this.set(key, ensName, DEFAULT_TTL.ENS_NAME);
+
+            return ensName;
         } catch (error) {
-            console.error(`Error getting ENS name for ${address}:`, error);
+            console.error(`Error getting/resolving ENS for ${address}:`, error);
             return null;
         }
     }
 
     /**
-     * Set an ENS name in the cache
+     * Get ETH price for a timestamp - fetches from API if not in cache
      */
-    async setEnsName(address: string, ensName: string | null): Promise<void> {
-        if (!address) return;
-
-        address = address.toLowerCase();
-        const key = `ens:${address}`;
-
-        try {
-            await this.set(key, ensName, DEFAULT_TTL.ENS_NAME);
-        } catch (error) {
-            console.error(`Error caching ENS name for ${address}:`, error);
-        }
-    }
-
-    /**
-     * Get ETH price for a specific timestamp
-     */
-    async getEthPrice(timestamp: number): Promise<number | null> {
+    async getEthPrice(timestamp: number, axios: any): Promise<number | null> {
         if (!timestamp) return null;
 
         const hourTimestamp = this.roundToHour(timestamp);
         const key = `eth_price:${hourTimestamp}`;
 
         try {
-            return await this.get<number>(key);
+            const cached = await this.get<number>(key);
+            if (cached !== null) {
+                return cached;
+            }
+
+            const response = await axios.get(
+                'https://min-api.cryptocompare.com/data/pricehistorical',
+                {
+                    params: {
+                        ts: timestamp,
+                        fsym: 'ETH',
+                        tsyms: 'USD',
+                        api_key: '193c7d86141cc605958fee66739113c13a0dbee55f0d66075fa19e7721ceced5'
+                    }
+                }
+            );
+
+            const priceUsd = response.data.ETH?.USD;
+            console.log(`Fetched ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd} from cryptocompare`);
+            if (priceUsd) {
+                const now = Math.floor(Date.now() / 1000);
+                const age = now - hourTimestamp;
+                let ttl = DEFAULT_TTL.ETH_PRICE_RECENT;
+
+                if (age > 24 * 60 * 60) {
+                    ttl = DEFAULT_TTL.ETH_PRICE_HISTORICAL;
+                } else if (age > 60 * 60) {
+                    ttl = DEFAULT_TTL.ETH_PRICE_OLD;
+                }
+
+                await this.set(key, priceUsd, ttl);
+                console.log(`Cached ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd.toFixed(2)} from cryptocompare`);
+
+                return priceUsd;
+            }
+
+            return null;
         } catch (error) {
             console.error(`Error getting ETH price for timestamp ${timestamp}:`, error);
             return null;
         }
-    }
-
-    /**
-     * Set ETH price for a specific timestamp
-     */
-    async setEthPrice(timestamp: number, priceUsd: number, source: string = 'cryptocompare'): Promise<void> {
-        if (!timestamp || priceUsd === undefined || priceUsd === null) return;
-
-        const hourTimestamp = this.roundToHour(timestamp);
-        const key = `eth_price:${hourTimestamp}`;
-
-        const now = Math.floor(Date.now() / 1000);
-        const age = now - hourTimestamp;
-        let ttl = DEFAULT_TTL.ETH_PRICE_RECENT;
-
-        if (age > 24 * 60 * 60) {
-            ttl = DEFAULT_TTL.ETH_PRICE_HISTORICAL;
-        } else if (age > 60 * 60) {
-            ttl = DEFAULT_TTL.ETH_PRICE_OLD;
-        }
-
-        try {
-            await this.set(key, priceUsd, ttl);
-            console.log(`Cached ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd.toFixed(2)} from ${source}`);
-        } catch (error) {
-            console.error(`Error caching ETH price for timestamp ${timestamp}:`, error);
-        }
-    }
-
-    /**
-     * Get the most recent ETH price (within the last 24 hours)
-     */
-    async getLatestEthPrice(): Promise<number | null> {
-        const now = Math.floor(Date.now() / 1000);
-        const currentHour = this.roundToHour(now);
-
-        const currentPrice = await this.getEthPrice(currentHour);
-        if (currentPrice !== null) {
-            return currentPrice;
-        }
-
-        for (let i = 1; i <= 24; i++) {
-            const timestamp = currentHour - (i * 3600);
-            const price = await this.getEthPrice(timestamp);
-            if (price !== null) {
-                return price;
-            }
-        }
-
-        return null;
     }
 }
 
