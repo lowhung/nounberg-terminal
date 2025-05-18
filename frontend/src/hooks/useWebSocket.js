@@ -1,4 +1,4 @@
-import {useState, useEffect, useCallback, useRef} from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export function useWebSocket() {
     const [isConnected, setIsConnected] = useState(false);
@@ -6,6 +6,8 @@ export function useWebSocket() {
     const [events, setEvents] = useState([]);
     const socketRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
+    const reconnectAttemptsRef = useRef(0);
+    const maxReconnectAttempts = 5;
 
     const connect = useCallback(() => {
         if (reconnectTimeoutRef.current) {
@@ -17,30 +19,34 @@ export function useWebSocket() {
             socketRef.current.close();
         }
 
+        if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+            console.log(`Maximum reconnect attempts (${maxReconnectAttempts}) reached. Giving up.`);
+            return;
+        }
+
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname === 'localhost' ? 'localhost:3000' : window.location.host;
         const wsUrl = `${wsProtocol}//${host}/ws`;
 
-        console.log(`Connecting to WebSocket at ${wsUrl}`);
+        console.log(`Connecting to WebSocket at ${wsUrl} (attempt ${reconnectAttemptsRef.current + 1})`);
 
         try {
             const socket = new WebSocket(wsUrl);
             socketRef.current = socket;
 
             socket.onopen = () => {
-                console.log('WebSocket connected');
+                console.log('WebSocket connected successfully');
                 setIsConnected(true);
+                reconnectAttemptsRef.current = 0; // Reset counter on successful connection
 
                 console.log('Subscribing to events');
-                socket.send(JSON.stringify({type: 'subscribe'}));
+                socket.send(JSON.stringify({ type: 'subscribe' }));
             };
 
             socket.onmessage = (event) => {
                 try {
-                    console.log('Raw WebSocket message received:', event.data);
                     const data = JSON.parse(event.data);
-                    console.log('Parsed WebSocket message:', data);
-
+                    
                     if (data.type === 'welcome') {
                         console.log('Connected to server:', data.message);
                     } else if (data.type === 'subscribed') {
@@ -51,12 +57,19 @@ export function useWebSocket() {
                         setLastEvent(data.data);
 
                         setEvents(prevEvents => {
+                            // Check if event already exists
+                            const exists = prevEvents.some(e => e.id === data.data.id);
+                            if (exists) {
+                                return prevEvents;
+                            }
+                            
+                            // Add new event at the beginning and limit to 10
                             const newEvents = [data.data, ...prevEvents].slice(0, 10);
-                            console.log('Updated events array:', newEvents);
                             return newEvents;
                         });
-                    } else if (data.type === 'test') {
-                        console.log('Received test message:', data.message);
+                    } else if (data.type === 'ping') {
+                        // Respond to ping with pong to keep connection alive
+                        socket.send(JSON.stringify({ type: 'pong' }));
                     }
                 } catch (err) {
                     console.error('Error processing WebSocket message:', err);
@@ -67,9 +80,12 @@ export function useWebSocket() {
                 console.log(`WebSocket disconnected with code ${event.code}. Reason: ${event.reason || 'No reason provided'}`);
                 setIsConnected(false);
 
-                if (event.code !== 1000) {
-                    console.log('Scheduling reconnection attempt...');
-                    reconnectTimeoutRef.current = setTimeout(() => connect(), 3000);
+                if (event.code !== 1000) { // 1000 is normal closure
+                    reconnectAttemptsRef.current++; 
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000); // Exponential backoff with max 30s
+                    
+                    console.log(`Scheduling reconnection attempt ${reconnectAttemptsRef.current} in ${delay}ms...`);
+                    reconnectTimeoutRef.current = setTimeout(() => connect(), delay);
                 }
             };
 
@@ -80,7 +96,9 @@ export function useWebSocket() {
             console.error('Error establishing WebSocket connection:', err);
             setIsConnected(false);
 
-            reconnectTimeoutRef.current = setTimeout(() => connect(), 3000);
+            reconnectAttemptsRef.current++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+            reconnectTimeoutRef.current = setTimeout(() => connect(), delay);
         }
     }, []);
 

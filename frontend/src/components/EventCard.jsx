@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './EventCard.css';
 
-export default function EventCard({event}) {
+export default function EventCard({ event, isNew = false }) {
+    const [highlight, setHighlight] = useState(isNew);
+    
+    useEffect(() => {
+        if (isNew) {
+            setHighlight(true);
+            const timer = setTimeout(() => setHighlight(false), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [isNew]);
+
     const formatDate = (timestamp) => {
         if (!timestamp) return 'N/A';
         const date = timestamp > 1000000000000
             ? new Date(timestamp) // already in milliseconds
             : new Date(timestamp * 1000); // convert seconds to milliseconds
 
-        return date.toLocaleString();
+        return date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
     };
 
     const formatEtherValue = (value) => {
@@ -20,16 +36,21 @@ export default function EventCard({event}) {
             return value;
         }
     };
+    
+    const shortenAddress = (address) => {
+        if (!address) return 'N/A';
+        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+    };
 
     return (
-        <div className="event-card">
+        <div className={`event-card ${highlight ? 'new-event' : ''}`}>
             <div className="event-image">
                 <img
                     src={event.thumbnailUrl}
                     alt={`Noun #${event.nounId}`}
                     onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'https://placekitten.com/100/100'; // fallback image
+                        e.target.src = 'https://placehold.co/120x120/252525/FFFFFF?text=Noun+%23' + event.nounId;
                     }}
                 />
             </div>
@@ -38,7 +59,7 @@ export default function EventCard({event}) {
                 <h3 className="event-headline">{event.headline}</h3>
 
                 <div className="event-meta">
-                    <div className="event-type">
+                    <div className="event-type" data-type={event.type}>
                         <span className="label">Type:</span>
                         <span className="value">{event.type}</span>
                     </div>
@@ -60,14 +81,18 @@ export default function EventCard({event}) {
                     {event.bidder && (
                         <div className="event-bidder">
                             <span className="label">Bidder:</span>
-                            <span className="value">{event.bidderEns || event.bidder}</span>
+                            <span className="value" title={event.bidder}>
+                                {event.bidderEns || shortenAddress(event.bidder)}
+                            </span>
                         </div>
                     )}
 
                     {event.winner && (
                         <div className="event-winner">
                             <span className="label">Winner:</span>
-                            <span className="value">{event.winnerEns || event.winner}</span>
+                            <span className="value" title={event.winner}>
+                                {event.winnerEns || shortenAddress(event.winner)}
+                            </span>
                         </div>
                     )}
                 </div>

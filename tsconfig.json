@@ -22,7 +22,8 @@
       "@/lib/*": ["./src/lib/*"],
       "@/api/*": ["./src/api/*"],
       "@/workers/*": ["./src/workers/*"],
-      "@/types/*": ["./src/types/*"]
+      "@/types/*": ["./src/types/*"],
+      "@/docs/*": ["./src/docs/*"],
     },
     "skipLibCheck": true
   },

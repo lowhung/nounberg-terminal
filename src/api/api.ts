@@ -5,16 +5,18 @@ import {createDbContext, createDbPool} from '@/lib/db';
 import {graphql} from "ponder";
 import schema from "ponder:schema";
 import {db} from "ponder:api";
+import docsRouter from '@/docs/router';
 
 const dbContext = createDbContext();
 const pgPool = createDbPool();
 
 const server = new Hono();
 
-// server.use('*', cors());
+// Middleware
 server.use('*', logger());
 server.use("/graphql", graphql({db, schema}));
 
+// API routes
 server.get('/api/events', async (c) => {
     try {
         const cursor = c.req.query('cursor');
@@ -31,8 +33,56 @@ server.get('/api/events', async (c) => {
         return c.json(result);
     } catch (error) {
         console.error('Error fetching events:', error);
-        return c.json({error: 'Internal Server Error'}, 500);
+        return c.json({error: {code: 'INTERNAL_ERROR', message: 'Internal Server Error'}}, 500);
     }
+});
+
+// Get a specific event by ID
+server.get('/api/events/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        if (!id) {
+            return c.json({error: {code: 'MISSING_PARAM', message: 'Event ID is required'}}, 400);
+        }
+
+        const event = await dbContext.auctionEvents.getEventById(id);
+        if (!event) {
+            return c.json({error: {code: 'NOT_FOUND', message: 'Event not found'}}, 404);
+        }
+
+        return c.json(event);
+    } catch (error) {
+        console.error('Error fetching event:', error);
+        return c.json({error: {code: 'INTERNAL_ERROR', message: 'Internal Server Error'}}, 500);
+    }
+});
+
+// Health check endpoint
+server.get('/api/health', async (c) => {
+    try {
+        const startTime = process.env.SERVER_START_TIME ? parseInt(process.env.SERVER_START_TIME, 10) : Date.now();
+        const uptime = Math.floor((Date.now() - startTime) / 1000);
+        
+        return c.json({
+            status: 'ok',
+            version: process.env.APP_VERSION || '1.0.0',
+            uptime
+        });
+    } catch (error) {
+        console.error('Health check failed:', error);
+        return c.json({
+            status: 'error',
+            message: 'Health check failed'
+        }, 500);
+    }
+});
+
+// Mount documentation routes
+server.route('/docs', docsRouter);
+
+// Redirect root to docs
+server.get('/', (c) => {
+    return c.redirect('/docs');
 });
 
 process.on('SIGINT', async () => {

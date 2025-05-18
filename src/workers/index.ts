@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {createPublicClient, http} from 'viem';
 import {mainnet} from 'viem/chains';
-import {closeMemcachedService, getMemcachedService} from '@/lib/cache';
+import {closeCacheService, getCacheService} from '@/lib/cache';
 import {completeJob, failJob, getNextJob} from '@/lib/queue';
 import {processEnrichEventJob} from './processors/event-processor';
 import {createDbClient, createDbPool} from '@/lib/db';
@@ -17,7 +17,7 @@ const provider = createPublicClient({
     transport: http(ETHEREUM_RPC_URL || ''),
 });
 
-const cacheService = getMemcachedService();
+const cacheService = getCacheService();
 
 async function processNextJob(): Promise<void> {
     let client;
@@ -72,10 +72,9 @@ async function startWorker(): Promise<void> {
     }
 }
 
-
 process.on('SIGINT', async () => {
     console.log('Shutting down worker...');
-    closeMemcachedService();
+    closeCacheService();
     await pgClient.end();
     await pgPool.end();
     process.exit(0);
@@ -83,7 +82,7 @@ process.on('SIGINT', async () => {
 
 process.on('SIGTERM', async () => {
     console.log('Shutting down worker...');
-    closeMemcachedService();
+    closeCacheService();
     await pgClient.end();
     await pgPool.end();
     process.exit(0);

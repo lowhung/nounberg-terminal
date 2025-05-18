@@ -2,7 +2,6 @@ import {Pool, PoolClient} from 'pg';
 import {Job} from "@/types/index";
 
 
-
 function serializeData(data: Record<string, any>): string {
     return JSON.stringify(data, (key, value) => {
         if (typeof value === 'bigint') {
@@ -59,10 +58,10 @@ export async function createJob(
         if (failedJob.rowCount && failedJob.rowCount > 0) {
             await client.query(
                 `UPDATE auction_jobs
-                 SET status = 'pending',
-                     attempts = 0,
-                     data = $2,
-                     error = NULL,
+                 SET status     = 'pending',
+                     attempts   = 0,
+                     data       = $2,
+                     error      = NULL,
                      updated_at = NOW()
                  WHERE id = $1`,
                 [failedJob.rows[0].id, serializeData(data)]
@@ -171,7 +170,7 @@ export async function completeJob(client: Pool | PoolClient, jobId: number): Pro
 
         await client.query(
             `UPDATE auction_jobs
-             SET status = 'completed',
+             SET status     = 'completed',
                  updated_at = NOW()
              WHERE id = $1
                AND status != 'completed'`,
@@ -208,8 +207,8 @@ export async function failJob(client: Pool | PoolClient, jobId: number, error: E
 
         await client.query(
             `UPDATE auction_jobs
-             SET status = 'failed',
-                 error = $2,
+             SET status     = 'failed',
+                 error      = $2,
                  updated_at = NOW()
              WHERE id = $1
                AND status NOT IN ('completed', 'failed')`,
@@ -252,10 +251,10 @@ export async function retryJob(client: Pool | PoolClient, jobId: number): Promis
 
         await client.query(
             `UPDATE auction_jobs
-             SET status = 'pending',
-                 error = NULL,
+             SET status     = 'pending',
+                 error      = NULL,
                  updated_at = NOW(),
-                 attempts = 0
+                 attempts   = 0
              WHERE id = $1
                AND status = 'failed'`,
             [jobId]

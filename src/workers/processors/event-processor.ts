@@ -1,6 +1,6 @@
 import pg from 'pg';
 import {formatEther} from 'viem';
-import {MemcachedService} from '@/lib/cache';
+import {CacheService} from '@/lib/cache';
 import {AuctionEventRepository} from "@/lib/db/repositories/auction-event-repository";
 import {Job} from "@/types/index";
 
@@ -8,7 +8,7 @@ import {Job} from "@/types/index";
 export async function processEnrichEventJob(
     client: pg.PoolClient,
     job: Job,
-    cacheService: MemcachedService,
+    cacheService: CacheService,
     provider: any,
     axios: any
 ): Promise<boolean> {

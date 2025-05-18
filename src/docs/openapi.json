@@ -1,0 +1,289 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Nounberg Terminal API",
+    "description": "API for the Nounberg Terminal - A real-time Nouns DAO auction tracker",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Nounberg Terminal Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/api/events": {
+      "get": {
+        "summary": "Get auction events",
+        "description": "Returns a paginated list of auction events",
+        "operationId": "getEvents",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of events to return",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Pagination cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter by event type",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["AuctionCreated", "AuctionBid", "AuctionSettled"]
+            }
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "List of auction events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Cursor for retrieving the next page of results"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}": {
+      "get": {
+        "summary": "Get a specific auction event",
+        "description": "Returns a single auction event by its ID",
+        "operationId": "getEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Event ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auction event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns the API health status",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "API health information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    },
+                    "uptime": {
+                      "type": "number",
+                      "example": 12345
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "required": ["id", "type", "nounId", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the event"
+          },
+          "blockNumber": {
+            "type": "integer",
+            "description": "Block number where the event occurred"
+          },
+          "blockHash": {
+            "type": "string",
+            "description": "Hash of the block where the event occurred"
+          },
+          "transactionHash": {
+            "type": "string",
+            "description": "Hash of the transaction containing the event"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["AuctionCreated", "AuctionBid", "AuctionSettled"],
+            "description": "Type of the auction event"
+          },
+          "nounId": {
+            "type": "integer",
+            "description": "ID of the Noun involved in the auction"
+          },
+          "value": {
+            "type": "string",
+            "description": "ETH amount involved in the transaction (bidding price or settlement value)"
+          },
+          "valueUsd": {
+            "type": "string",
+            "description": "USD equivalent of the ETH value"
+          },
+          "bidder": {
+            "type": "string",
+            "description": "Ethereum address of the bidder (for AuctionBid events)"
+          },
+          "bidderEns": {
+            "type": "string",
+            "nullable": true,
+            "description": "ENS name of the bidder, if available"
+          },
+          "winner": {
+            "type": "string",
+            "description": "Ethereum address of the auction winner (for AuctionSettled events)"
+          },
+          "winnerEns": {
+            "type": "string",
+            "nullable": true,
+            "description": "ENS name of the winner, if available"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "URL for the Noun thumbnail image"
+          },
+          "headline": {
+            "type": "string",
+            "description": "Human-readable headline summarizing the event"
+          },
+          "createdAt": {
+            "type": "integer",
+            "description": "Unix timestamp when the event was created/processed"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

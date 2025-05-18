@@ -13,7 +13,7 @@ const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
 /**
  * Service for interacting with Memcached
  */
-export class MemcachedService {
+export class CacheService {
     private client: Memcached;
 
     constructor(servers: string = process.env.MEMCACHED_SERVERS || 'localhost:11211') {
@@ -35,7 +35,7 @@ export class MemcachedService {
             console.log('Memcached reconnecting:', details);
         });
 
-        console.log(`MemcachedService initialized with servers: ${servers}`);
+        console.log(`CacheService initialized with servers: ${servers}`);
     }
 
     /**
@@ -189,24 +189,24 @@ export class MemcachedService {
     }
 }
 
-let memcachedServiceInstance: MemcachedService | null = null;
+let cacheServiceInstance: CacheService | null = null;
 
 /**
  * Get the memcached service instance
  */
-export function getMemcachedService(): MemcachedService {
-    if (!memcachedServiceInstance) {
-        memcachedServiceInstance = new MemcachedService();
+export function getCacheService(): CacheService {
+    if (!cacheServiceInstance) {
+        cacheServiceInstance = new CacheService();
     }
-    return memcachedServiceInstance;
+    return cacheServiceInstance;
 }
 
 /**
  * Close the memcached service instance
  */
-export function closeMemcachedService(): void {
-    if (memcachedServiceInstance) {
-        memcachedServiceInstance.close();
-        memcachedServiceInstance = null;
+export function closeCacheService(): void {
+    if (cacheServiceInstance) {
+        cacheServiceInstance.close();
+        cacheServiceInstance = null;
     }
 }

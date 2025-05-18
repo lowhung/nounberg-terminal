@@ -42,9 +42,17 @@ export function setupWebSockets(app: Hono) {
             },
             onMessage(ws, message) {
                 try {
-                    const data = JSON.parse(message.toString());
-                    console.log('Received message from client:', data);
-
+                    let data;
+                    if (typeof message === 'string') {
+                        data = JSON.parse(message);
+                    } else if (Buffer.isBuffer(message)) {
+                        data = JSON.parse(message.toString());
+                    } else if (typeof message === 'object') {
+                        data = message;
+                    } else {
+                        console.error('Received message of unexpected type:', typeof message);
+                        return;
+                    }
                     if (data.type === 'subscribe') {
                         subscribedClients.add(ws);
                         ws.send(JSON.stringify({type: 'subscribed'}));
@@ -60,7 +68,7 @@ export function setupWebSockets(app: Hono) {
                         }));
                     }
                 } catch (error) {
-                    console.error('Error handling WebSocket message:', error);
+                    console.error('Error handling WebSocket message:', error, 'Raw message:', message);
                 }
             },
             onClose(ws) {
@@ -75,9 +83,7 @@ export function setupWebSockets(app: Hono) {
             }
         };
     }));
-
     console.log('WebSocket route registered at /ws');
-
     return {injectWebSocket};
 }
 

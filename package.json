@@ -1,0 +1,39 @@
+{
+  "name": "nounberg-terminal",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ponder dev",
+    "start": "ponder start",
+    "db": "ponder db",
+    "codegen": "ponder codegen",
+    "lint": "eslint .",
+    "typecheck": "tsc",
+    "workers": "tsx src/workers/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.9.0",
+    "@hono/node-ws": "^1.1.4",
+    "axios": "1.9.0",
+    "hono": "^4.5.0",
+    "memcached": "^2.2.2",
+    "node-cache": "^5.1.2",
+    "pg": "^8.16.0",
+    "ponder": "0.10.27",
+    "viem": "^2.21.3"
+  },
+  "devDependencies": {
+    "@types/memcached": "^2.2.8",
+    "@types/node": "^20.9.0",
+    "@types/pg": "^8.10.9",
+    "@types/ws": "^8.5.10",
+    "eslint": "^8.53.0",
+    "eslint-config-ponder": "0.10.27",
+    "tsx": "^4.6.2",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.14"
+  }
+}

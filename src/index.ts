@@ -26,62 +26,62 @@ async function processAuctionEvent(event: any, type: string) {
     };
 }
 
-ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
-    const {nounId, startTime, endTime} = event.args;
-
-    const eventData = await processAuctionEvent(event, "created");
-
-    const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
-
-    const headline = `Auction started for Noun #${nounId.toString()}`;
-
-    await context.db.insert(auctionEvents).values({
-        ...eventData,
-        nounId: Number(nounId),
-        startTime: Number(startTime),
-        endTime: Number(endTime),
-        headline,
-        thumbnailUrl,
-    });
-
-    await createJob(pgPool, eventData.id, 'enrich_event', {
-        blockTimestamp: eventData.blockTimestamp
-    });
-
-    console.log(`Indexed AuctionCreated for Noun #${nounId.toString()}`);
-});
-
-ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
-    const {nounId, sender, value, extended} = event.args;
-
-    const eventData = await processAuctionEvent(event, "bid");
-
-    const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
-
-    const ethAmount = formatEther(value);
-
-    const bidderDisplay = `${sender.slice(0, 6)}...${sender.slice(-4)}`;
-
-    const headline = `Bid placed on Noun #${nounId.toString()} for ${ethAmount} Ξ by ${bidderDisplay}`;
-
-    await context.db.insert(auctionEvents).values({
-        ...eventData,
-        nounId: Number(nounId),
-        bidder: sender,
-        value: value.toString(),
-        extended,
-        headline,
-        thumbnailUrl,
-    });
-
-    await createJob(pgPool, eventData.id, 'enrich_event', {
-        blockTimestamp: eventData.blockTimestamp,
-        address: sender.toLowerCase(),
-        value: value.toString()
-    });
-
-    console.log(`Indexed AuctionBid for Noun #${nounId.toString()} by ${bidderDisplay}`);
-});
+// ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
+//     const {nounId, startTime, endTime} = event.args;
+//
+//     const eventData = await processAuctionEvent(event, "created");
+//
+//     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
+//
+//     const headline = `Auction started for Noun #${nounId.toString()}`;
+//
+//     await context.db.insert(auctionEvents).values({
+//         ...eventData,
+//         nounId: Number(nounId),
+//         startTime: Number(startTime),
+//         endTime: Number(endTime),
+//         headline,
+//         thumbnailUrl,
+//     });
+//
+//     await createJob(pgPool, eventData.id, 'enrich_event', {
+//         blockTimestamp: eventData.blockTimestamp
+//     });
+//
+//     console.log(`Indexed AuctionCreated for Noun #${nounId.toString()}`);
+// });
+//
+// ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
+//     const {nounId, sender, value, extended} = event.args;
+//
+//     const eventData = await processAuctionEvent(event, "bid");
+//
+//     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
+//
+//     const ethAmount = formatEther(value);
+//
+//     const bidderDisplay = `${sender.slice(0, 6)}...${sender.slice(-4)}`;
+//
+//     const headline = `Bid placed on Noun #${nounId.toString()} for ${ethAmount} Ξ by ${bidderDisplay}`;
+//
+//     await context.db.insert(auctionEvents).values({
+//         ...eventData,
+//         nounId: Number(nounId),
+//         bidder: sender,
+//         value: value.toString(),
+//         extended,
+//         headline,
+//         thumbnailUrl,
+//     });
+//
+//     await createJob(pgPool, eventData.id, 'enrich_event', {
+//         blockTimestamp: eventData.blockTimestamp,
+//         address: sender.toLowerCase(),
+//         value: value.toString()
+//     });
+//
+//     console.log(`Indexed AuctionBid for Noun #${nounId.toString()} by ${bidderDisplay}`);
+// });
 
 ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
     const {nounId, winner, amount} = event.args;

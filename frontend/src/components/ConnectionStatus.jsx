@@ -1,15 +1,13 @@
 import React from 'react';
 import './ConnectionStatus.css';
 
-const ConnectionStatus = ({ isConnected }) => {
+export default function ConnectionStatus({ isConnected }) {
   return (
     <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-      <div className="status-indicator"></div>
+      <span className="status-indicator"></span>
       <span className="status-text">
-        {isConnected ? 'Live: Connected to auction feed' : 'Disconnected: Trying to reconnect...'}
+        {isConnected ? 'Connected to Nounberg Terminal' : 'Disconnected - Trying to reconnect...'}
       </span>
     </div>
   );
-};
-
-export default ConnectionStatus;
+}
