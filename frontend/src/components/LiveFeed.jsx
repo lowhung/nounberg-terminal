@@ -10,7 +10,6 @@ export default function LiveFeed() {
     const [combinedEvents, setCombinedEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // Initially load some historical events
     useEffect(() => {
         const loadInitialEvents = async () => {
             try {
@@ -27,25 +26,20 @@ export default function LiveFeed() {
         loadInitialEvents();
     }, []);
     
-    // Update combined events when websocket events change
     useEffect(() => {
         if (webSocketEvents.length > 0) {
-            // First, combine with existing events
             const merged = [...webSocketEvents, ...combinedEvents];
             
-            // Then remove duplicates by ID
-            const uniqueEvents = merged.filter((event, index, self) => 
+            const uniqueEvents = merged.filter((event, index, self) =>
                 index === self.findIndex(e => e.id === event.id)
             );
             
-            // Sort by createdAt timestamp in descending order (newest first)
             uniqueEvents.sort((a, b) => {
                 const timeA = a.createdAt > 1000000000000 ? a.createdAt : a.createdAt * 1000;
                 const timeB = b.createdAt > 1000000000000 ? b.createdAt : b.createdAt * 1000;
                 return timeB - timeA;
             });
             
-            // Limit to 10 events
             setCombinedEvents(uniqueEvents.slice(0, 10));
         }
     }, [webSocketEvents]);

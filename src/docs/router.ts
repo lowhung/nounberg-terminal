@@ -1,48 +1,44 @@
-import { Hono } from 'hono';
-import { join } from 'path';
-import { readFileSync } from 'fs';
+import {Hono} from 'hono';
+import {join} from 'path';
+import {readFileSync} from 'fs';
 
 export const docsRouter = new Hono();
 
-// Serve OpenAPI JSON spec
 docsRouter.get('/openapi.json', (c) => {
-  try {
-    const openApiPath = join(__dirname, 'openapi.json');
-    const openApiContent = readFileSync(openApiPath, 'utf-8');
-    return c.json(JSON.parse(openApiContent));
-  } catch (error) {
-    console.error('Error serving OpenAPI spec:', error);
-    return c.json({ error: 'Failed to load API specification' }, 500);
-  }
+    try {
+        const openApiPath = join(__dirname, 'openapi.json');
+        const openApiContent = readFileSync(openApiPath, 'utf-8');
+        return c.json(JSON.parse(openApiContent));
+    } catch (error) {
+        console.error('Error serving OpenAPI spec:', error);
+        return c.json({error: 'Failed to load API specification'}, 500);
+    }
 });
 
-// Serve the main documentation page
 docsRouter.get('/', async (c) => {
-  try {
-    const htmlPath = join(__dirname, 'index.html');
-    const content = readFileSync(htmlPath, 'utf-8');
-    return c.html(content);
-  } catch (error) {
-    console.error('Error serving docs HTML:', error);
-    return c.text('Documentation unavailable', 500);
-  }
+    try {
+        const htmlPath = join(__dirname, 'index.html');
+        const content = readFileSync(htmlPath, 'utf-8');
+        return c.html(content);
+    } catch (error) {
+        console.error('Error serving docs HTML:', error);
+        return c.text('Documentation unavailable', 500);
+    }
 });
 
-// Serve WebSocket documentation page
 docsRouter.get('/websocket', async (c) => {
-  try {
-    const htmlPath = join(__dirname, 'websocket.html');
-    const content = readFileSync(htmlPath, 'utf-8');
-    return c.html(content);
-  } catch (error) {
-    console.error('Error serving WebSocket docs HTML:', error);
-    return c.text('WebSocket documentation unavailable', 500);
-  }
+    try {
+        const htmlPath = join(__dirname, 'websocket.html');
+        const content = readFileSync(htmlPath, 'utf-8');
+        return c.html(content);
+    } catch (error) {
+        console.error('Error serving WebSocket docs HTML:', error);
+        return c.text('WebSocket documentation unavailable', 500);
+    }
 });
 
-// Swagger UI for interactive API docs
 docsRouter.get('/swagger', async (c) => {
-  const html = `
+    const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,8 +118,8 @@ docsRouter.get('/swagger', async (c) => {
 </body>
 </html>
   `;
-  
-  return c.html(html);
+
+    return c.html(html);
 });
 
 export default docsRouter;

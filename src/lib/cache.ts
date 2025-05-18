@@ -96,7 +96,10 @@ export class CacheService {
     /**
      * Round a timestamp to the nearest hour
      */
-    private roundToHour(timestamp: number): number {
+    private roundToHour(timestamp: number | bigint): number {
+        if (typeof timestamp === 'bigint') {
+            timestamp = Number(timestamp);
+        }
         return Math.floor(timestamp / 3600) * 3600;
     }
 
@@ -138,7 +141,7 @@ export class CacheService {
     /**
      * Get ETH price for a timestamp - fetches from API if not in cache
      */
-    async getEthPrice(timestamp: number, axios: any): Promise<number | null> {
+    async getEthPrice(timestamp: bigint, axios: any): Promise<number | null> {
         if (!timestamp) return null;
 
         const hourTimestamp = this.roundToHour(timestamp);

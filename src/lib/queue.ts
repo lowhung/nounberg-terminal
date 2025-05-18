@@ -1,274 +1,186 @@
-import {Pool, PoolClient} from 'pg';
-import {Job} from "@/types/index";
+import {Queue, Worker, Job, QueueEvents} from 'bullmq';
+import Redis from 'ioredis';
+import {getCacheService} from './cache';
+import {createPublicClient, http} from 'viem';
+import {mainnet} from 'viem/chains';
+import axios from 'axios';
+import {EventData} from '@/types';
 
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL || process.env.PONDER_RPC_URL_1;
 
-function serializeData(data: Record<string, any>): string {
-    return JSON.stringify(data, (key, value) => {
-        if (typeof value === 'bigint') {
-            return value.toString();
-        }
-        return value;
+export const QUEUE_NAMES = {
+    EVENT_ENRICHMENT: 'event-enrichment',
+};
+
+export function createRedisConnection() {
+    return new Redis(REDIS_URL, {
+        maxRetriesPerRequest: null,
     });
 }
 
-export async function createJob(
-    client: Pool | PoolClient,
-    eventId: string,
-    type: string,
-    data: Record<string, any> = {}
-): Promise<number | null> {
-    try {
-        const completedJob = await client.query(
-            `SELECT id
-             FROM auction_jobs
-             WHERE event_id = $1
-               AND type = $2
-               AND status = 'completed'`,
-            [eventId, type]
-        );
+let redisConnection: Redis | null = null;
 
-        if (completedJob.rowCount && completedJob.rowCount > 0) {
-            console.log(`Job for event ${eventId} already completed, not recreating`);
-            return completedJob.rows[0].id;
-        }
-
-        const existingJob = await client.query(
-            `SELECT id, status
-             FROM auction_jobs
-             WHERE event_id = $1
-               AND type = $2
-               AND status IN ('pending', 'processing')`,
-            [eventId, type]
-        );
-
-        if (existingJob.rowCount && existingJob.rowCount > 0) {
-            console.log(`Job already exists for event ${eventId} with status ${existingJob.rows[0].status}`);
-            return existingJob.rows[0].id;
-        }
-
-        const failedJob = await client.query(
-            `SELECT id
-             FROM auction_jobs
-             WHERE event_id = $1
-               AND type = $2
-               AND status = 'failed'`,
-            [eventId, type]
-        );
-
-        if (failedJob.rowCount && failedJob.rowCount > 0) {
-            await client.query(
-                `UPDATE auction_jobs
-                 SET status     = 'pending',
-                     attempts   = 0,
-                     data       = $2,
-                     error      = NULL,
-                     updated_at = NOW()
-                 WHERE id = $1`,
-                [failedJob.rows[0].id, serializeData(data)]
-            );
-
-            const jobId = failedJob.rows[0].id;
-
-            await client.query(`NOTIFY new_job, '${jobId}'`);
-
-            console.log(`Retrying previously failed job ${jobId} for event ${eventId}`);
-            return jobId;
-        }
-
-        const result = await client.query(
-            `INSERT INTO auction_jobs (event_id, type, status, data, created_at, updated_at)
-             VALUES ($1, $2, 'pending', $3, NOW(), NOW())
-             ON CONFLICT (event_id, type, status) DO NOTHING
-             RETURNING id`,
-            [eventId, type, serializeData(data)]
-        );
-
-        if (result.rowCount && result.rowCount > 0) {
-            const jobId = result.rows[0].id;
-
-            await client.query(`NOTIFY new_job, '${jobId}'`);
-
-            console.log(`Created job ${jobId} for event ${eventId}`);
-            return jobId;
-        } else {
-            const conflictJob = await client.query(
-                `SELECT id
-                 FROM auction_jobs
-                 WHERE event_id = $1
-                   AND type = $2
-                   AND status = 'pending'`,
-                [eventId, type]
-            );
-
-            if (conflictJob.rowCount && conflictJob.rowCount > 0) {
-                console.log(`Conflict creating job for event ${eventId}, using existing job ${conflictJob.rows[0].id}`);
-                return conflictJob.rows[0].id;
-            }
-
-            console.warn(`Failed to create job for event ${eventId} but no conflict found`);
-            return null;
-        }
-    } catch (error) {
-        console.error('Error creating job:', error);
-        return null;
+function getRedisConnection(): Redis {
+    if (!redisConnection) {
+        redisConnection = createRedisConnection();
+        console.log('Created new Redis connection for queue operations');
     }
+    return redisConnection;
 }
 
-export async function getNextJob(client: Pool | PoolClient): Promise<Job | null> {
+let eventEnrichmentQueue: Queue | null = null;
+
+export function getEventEnrichmentQueue(): Queue {
+    if (!eventEnrichmentQueue) {
+        eventEnrichmentQueue = new Queue(QUEUE_NAMES.EVENT_ENRICHMENT, {
+            connection: getRedisConnection(),
+            defaultJobOptions: {
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                },
+            }
+        });
+        console.log('Created event enrichment queue');
+
+        const cleanupQueue = async () => {
+            if (eventEnrichmentQueue) {
+                console.log('Closing event enrichment queue');
+                await eventEnrichmentQueue.close();
+                eventEnrichmentQueue = null;
+            }
+            if (redisConnection) {
+                console.log('Closing Redis connection for queue');
+                redisConnection.disconnect();
+                redisConnection = null;
+            }
+        };
+
+        process.on('SIGINT', cleanupQueue);
+        process.on('SIGTERM', cleanupQueue);
+    }
+    return eventEnrichmentQueue;
+}
+
+export async function addEventEnrichmentJob(eventData: EventData) {
+    const queue = getEventEnrichmentQueue();
     try {
-        await client.query('BEGIN');
-
-        const result = await client.query(
-            `UPDATE auction_jobs
-             SET status     = 'processing',
-                 attempts   = attempts + 1,
-                 updated_at = NOW()
-             WHERE id = (SELECT id
-                         FROM auction_jobs
-                         WHERE status = 'pending'
-                         ORDER BY created_at
-                             FOR UPDATE SKIP LOCKED
-                         LIMIT 1)
-             RETURNING id, event_id, type, attempts, data`
-        );
-
-        if (result.rowCount === 0) {
-            await client.query('COMMIT');
-            return null;
-        }
-
-        const job = result.rows[0];
-        job.data = job.data || {};
-
-        await client.query('COMMIT');
+        const job = await queue.add(`enrich-event-${eventData.id}`, eventData, {});
+        console.log(`Added job ${job.id} to enrich event ${eventData.id}`);
         return job;
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Error getting next job:', error);
+        if (error.name === 'BullMQDuplicateJob') {
+            console.log(`Job for event ${eventData.id} already exists, skipping`);
+            return null;
+        }
+        console.error(`Error adding job for event ${eventData.id}:`, error);
         throw error;
     }
 }
 
-export async function completeJob(client: Pool | PoolClient, jobId: number): Promise<void> {
-    try {
-        const jobCheck = await client.query(
-            `SELECT status
-             FROM auction_jobs
-             WHERE id = $1`,
-            [jobId]
-        );
+export function createWorker(
+    processCallback: (job: Job) => Promise<any>,
+    onJobComplete?: (jobId: string) => void
+): Worker {
+    const worker = new Worker(
+        QUEUE_NAMES.EVENT_ENRICHMENT,
+        async (job: Job) => {
+            console.log(`Processing job ${job.id} for event enrichment`);
 
-        if (jobCheck.rowCount === 0) {
-            console.log(`Job ${jobId} not found, cannot complete`);
-            return;
-        }
+            try {
+                const result = await processCallback(job);
 
-        if (jobCheck.rows[0].status === 'completed') {
-            console.log(`Job ${jobId} is already completed`);
-            return;
-        }
+                if (onJobComplete) {
+                    onJobComplete(job.data.id);
+                }
 
-        await client.query(
-            `UPDATE auction_jobs
-             SET status     = 'completed',
-                 updated_at = NOW()
-             WHERE id = $1
-               AND status != 'completed'`,
-            [jobId]
-        );
-    } catch (error) {
-        if (error.code === '23505') {
-            console.warn(`Job ${jobId} completion constraint violation, may already be completed`);
-        } else {
-            console.error(`Error completing job ${jobId}:`, error);
-            throw error;
+                return result;
+            } catch (error) {
+                console.error(`Error processing job ${job.id}:`, error);
+                throw error;
+            }
+        },
+        {
+            connection: getRedisConnection(),
         }
-    }
+    );
+
+    worker.on('completed', (job) => {
+        console.log(`Job ${job.id} completed successfully`);
+    });
+
+    worker.on('failed', (job, error) => {
+        console.error(`Job ${job?.id} failed with error:`, error);
+    });
+
+    worker.on('error', (error) => {
+        console.error('Worker error:', error);
+    });
+
+    return worker;
 }
 
-export async function failJob(client: Pool | PoolClient, jobId: number, error: Error | string): Promise<void> {
-    try {
-        const jobCheck = await client.query(
-            `SELECT status
-             FROM auction_jobs
-             WHERE id = $1`,
-            [jobId]
-        );
-
-        if (jobCheck.rowCount === 0) {
-            console.log(`Job ${jobId} not found, cannot mark as failed`);
-            return;
-        }
-
-        if (['completed', 'failed'].includes(jobCheck.rows[0].status)) {
-            console.log(`Job ${jobId} is already in final state: ${jobCheck.rows[0].status}`);
-            return;
-        }
-
-        await client.query(
-            `UPDATE auction_jobs
-             SET status     = 'failed',
-                 error      = $2,
-                 updated_at = NOW()
-             WHERE id = $1
-               AND status NOT IN ('completed', 'failed')`,
-            [jobId, error.toString()]
-        );
-        console.log(`Failed job ${jobId}: ${error.toString()}`);
-    } catch (err) {
-        if (err.code === '23505') {
-            console.warn(`Job ${jobId} failure constraint violation, may already be in final state`);
-        } else {
-            console.error(`Error failing job ${jobId}:`, err);
-            throw err;
-        }
-    }
+export function getJobProcessingDependencies() {
+    return {
+        cacheService: getCacheService(),
+        provider: createPublicClient({
+            chain: mainnet,
+            transport: http(ETHEREUM_RPC_URL || ''),
+        }),
+        axios
+    };
 }
 
-export async function retryJob(client: Pool | PoolClient, jobId: number): Promise<void> {
-    try {
-        const jobCheck = await client.query(
-            `SELECT status
-             FROM auction_jobs
-             WHERE id = $1`,
-            [jobId]
-        );
+let queueEvents: QueueEvents | null = null;
 
-        if (jobCheck.rowCount === 0) {
-            console.log(`Job ${jobId} not found, cannot retry`);
-            return;
+export function setupQueueEvents(onJobCompleted?: (jobId: string, returnValue: any) => void): QueueEvents {
+    if (queueEvents) {
+        return queueEvents;
+    }
+
+    queueEvents = new QueueEvents(QUEUE_NAMES.EVENT_ENRICHMENT, {
+        connection: getRedisConnection(),
+    });
+
+    queueEvents.on('completed', ({jobId, returnvalue}) => {
+        console.log(`Job ${jobId} completed with result:`, returnvalue);
+        if (onJobCompleted) {
+            onJobCompleted(jobId, returnvalue);
         }
+    });
 
-        if (['pending', 'processing'].includes(jobCheck.rows[0].status)) {
-            console.log(`Job ${jobId} is already in progress with status: ${jobCheck.rows[0].status}`);
-            return;
+    queueEvents.on('failed', ({jobId, failedReason}) => {
+        console.error(`Job ${jobId} failed with reason:`, failedReason);
+    });
+
+    const shutdown = async () => {
+        if (queueEvents) {
+            console.log('Shutting down queue events listener...');
+            await queueEvents.close();
+            queueEvents = null;
         }
+    };
 
-        if (jobCheck.rows[0].status === 'completed') {
-            console.log(`Job ${jobId} is already completed, not retrying`);
-            return;
-        }
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
 
-        await client.query(
-            `UPDATE auction_jobs
-             SET status     = 'pending',
-                 error      = NULL,
-                 updated_at = NOW(),
-                 attempts   = 0
-             WHERE id = $1
-               AND status = 'failed'`,
-            [jobId]
-        );
+    return queueEvents;
+}
 
-        await client.query(`NOTIFY new_job, '${jobId}'`);
+export async function closeQueueResources() {
+    if (queueEvents) {
+        await queueEvents.close();
+        queueEvents = null;
+    }
 
-        console.log(`Retrying job ${jobId}`);
-    } catch (error) {
-        if (error.code === '23505') {
-            console.warn(`Job ${jobId} retry constraint violation, may already be in progress`);
-        } else {
-            console.error(`Error retrying job ${jobId}:`, error);
-            throw error;
-        }
+    if (eventEnrichmentQueue) {
+        await eventEnrichmentQueue.close();
+        eventEnrichmentQueue = null;
+    }
+
+    if (redisConnection) {
+        redisConnection.disconnect();
+        redisConnection = null;
     }
 }

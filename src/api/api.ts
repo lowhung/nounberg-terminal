@@ -12,11 +12,9 @@ const pgPool = createDbPool();
 
 const server = new Hono();
 
-// Middleware
 server.use('*', logger());
 server.use("/graphql", graphql({db, schema}));
 
-// API routes
 server.get('/api/events', async (c) => {
     try {
         const cursor = c.req.query('cursor');
@@ -37,7 +35,6 @@ server.get('/api/events', async (c) => {
     }
 });
 
-// Get a specific event by ID
 server.get('/api/events/:id', async (c) => {
     try {
         const id = c.req.param('id');
@@ -57,7 +54,6 @@ server.get('/api/events/:id', async (c) => {
     }
 });
 
-// Health check endpoint
 server.get('/api/health', async (c) => {
     try {
         const startTime = process.env.SERVER_START_TIME ? parseInt(process.env.SERVER_START_TIME, 10) : Date.now();
@@ -77,10 +73,8 @@ server.get('/api/health', async (c) => {
     }
 });
 
-// Mount documentation routes
 server.route('/docs', docsRouter);
 
-// Redirect root to docs
 server.get('/', (c) => {
     return c.redirect('/docs');
 });

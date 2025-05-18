@@ -12,7 +12,8 @@
     "module": "ESNext",
     "noEmit": true,
     "lib": [
-      "ES2022"
+      "ES2022",
+      "DOM"
     ],
     "target": "ES2022",
     "paths": {
@@ -24,6 +25,7 @@
       "@/workers/*": ["./src/workers/*"],
       "@/types/*": ["./src/types/*"],
       "@/docs/*": ["./src/docs/*"],
+      "@/*": ["./src/*"]
     },
     "skipLibCheck": true
   },

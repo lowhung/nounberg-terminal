@@ -3,7 +3,7 @@ import {createNodeWebSocket} from '@hono/node-ws';
 import {createDbClient} from '@/lib/db';
 import WebSocket from 'ws';
 
-const subscribedClients = new Set<WebSocket>();
+const subscribedClients = new Set<any>();
 
 
 function snakeToCamel(obj: any): any {
@@ -40,17 +40,15 @@ export function setupWebSockets(app: Hono) {
                     message: 'Connected to Nounberg Terminal'
                 }));
             },
-            onMessage(ws, message) {
+            onMessage(event, ws) {
                 try {
                     let data;
-                    if (typeof message === 'string') {
-                        data = JSON.parse(message);
-                    } else if (Buffer.isBuffer(message)) {
-                        data = JSON.parse(message.toString());
-                    } else if (typeof message === 'object') {
-                        data = message;
+                    if (Buffer.isBuffer(event)) {
+                        data = JSON.parse(event.toString());
+                    } else if (typeof event === 'object') {
+                        data = event;
                     } else {
-                        console.error('Received message of unexpected type:', typeof message);
+                        console.error('Received event of unexpected type:', typeof event);
                         return;
                     }
                     if (data.type === 'subscribe') {
@@ -68,10 +66,10 @@ export function setupWebSockets(app: Hono) {
                         }));
                     }
                 } catch (error) {
-                    console.error('Error handling WebSocket message:', error, 'Raw message:', message);
+                    console.error('Error handling WebSocket message:', error, 'Raw message:', event);
                 }
             },
-            onClose(ws) {
+            onClose(event, ws) {
                 console.log('WebSocket client disconnected');
                 subscribedClients.delete(ws);
             },
@@ -92,7 +90,7 @@ export async function startNotificationListener(db: any) {
         const pgClient = createDbClient();
         await pgClient.connect();
 
-        await pgClient.query('LISTEN event_updated');
+        await pgClient.query('LISTEN  event_created');
         pgClient.on('notification', async (notification) => {
             try {
                 const eventId = notification.payload;

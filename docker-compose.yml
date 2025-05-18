@@ -18,6 +18,20 @@ services:
       start_period: 30s
     restart: always
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
   memcached:
     image: memcached:1.6-alpine
     restart: always
@@ -40,6 +54,8 @@ services:
         condition: service_healthy
       memcached:
         condition: service_started
+      redis:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
@@ -48,6 +64,7 @@ services:
       PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
       PORT: 3000
       MEMCACHED_SERVERS: memcached:11211
+      REDIS_URL: redis://redis:6379
     volumes:
       - /app/node_modules
 
@@ -71,15 +88,15 @@ services:
         condition: service_healthy
       memcached:
         condition: service_started
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
       ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
-      WORKER_JOB_TYPES: "enrich_event"  # Default job type
-      WORKER_POLL_INTERVAL: 1000
-      WORKER_CONCURRENCY: 2  # Process up to 2 jobs concurrently per worker
       MEMCACHED_SERVERS: memcached:11211
+      REDIS_URL: redis://redis:6379
     volumes:
       - /app/node_modules
     # Use the deployment section to scale workers
@@ -93,3 +110,5 @@ services:
 volumes:
   nounberg-data:
     name: nounberg-data
+  redis-data:
+    name: redis-data
