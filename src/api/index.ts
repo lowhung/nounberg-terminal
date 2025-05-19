@@ -2,6 +2,7 @@ import {serve} from '@hono/node-server';
 import app from './api';
 import {setupWebSockets, startNotificationListener, broadcastMessage} from './websocket';
 import {createDbContext} from '@/lib/db';
+import {logger} from "@/lib/logger";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -29,13 +30,13 @@ async function start() {
 
         return {server, db, notificationClient};
     } catch (error) {
-        console.error('Failed to start server:', error);
+        logger.error('Failed to start server:', error);
         throw error;
     }
 }
 
 start().catch(error => {
-    console.error('Fatal error during startup:', error);
+    logger.error('Fatal error during startup:', error);
     process.exit(1);
 });
 

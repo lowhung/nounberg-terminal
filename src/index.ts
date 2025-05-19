@@ -1,6 +1,7 @@
 import { ponder } from "ponder:registry";
 import { addEventEnrichmentJob } from "./lib/queue"; 
 import { EventData } from "./types";
+import {logger} from "@/lib/logger";
 
 ponder.on("NounsAuctionHouse:AuctionCreated", async ({ event, context }) => {
     const { nounId, startTime, endTime } = event.args;
@@ -28,7 +29,7 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({ event, context }) => {
 
     await addEventEnrichmentJob(eventData);
 
-    console.log(`Queued AuctionCreated for Noun #${nounId.toString()}`);
+    logger.debug(`Queued AuctionCreated for Noun #${nounId.toString()}`);
 });
 
 ponder.on("NounsAuctionHouse:AuctionBid", async ({ event, context }) => {
@@ -58,7 +59,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({ event, context }) => {
 
     await addEventEnrichmentJob(eventData);
 
-    console.log(`Queued AuctionBid for Noun #${nounId.toString()} by ${sender.slice(0, 6)}...${sender.slice(-4)}`);
+    logger.debug(`Queued AuctionBid for Noun #${nounId.toString()} by ${sender.slice(0, 6)}...${sender.slice(-4)}`);
 });
 
 ponder.on("NounsAuctionHouse:AuctionSettled", async ({ event, context }) => {
@@ -87,5 +88,5 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({ event, context }) => {
 
     await addEventEnrichmentJob(eventData);
 
-    console.log(`Queued AuctionSettled for Noun #${nounId.toString()} to ${winner.slice(0, 6)}...${winner.slice(-4)}`);
+    logger.debug(`Queued AuctionSettled for Noun #${nounId.toString()} to ${winner.slice(0, 6)}...${winner.slice(-4)}`);
 });

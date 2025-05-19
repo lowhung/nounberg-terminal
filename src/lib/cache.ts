@@ -1,5 +1,6 @@
 import Memcached from "memcached";
 import {Address} from "viem";
+import {logger} from "@/lib/logger";
 
 const DEFAULT_TTL = {
     ENS_NAME: 48 * 60 * 60,
@@ -28,14 +29,14 @@ export class CacheService {
         });
 
         this.client.on('failure', (details) => {
-            console.error('Memcached connection failure:', details);
+            logger.error('Memcached connection failure:', details);
         });
 
         this.client.on('reconnecting', (details) => {
-            console.log('Memcached reconnecting:', details);
+            logger.info('Memcached reconnecting:', details);
         });
 
-        console.log(`CacheService initialized with servers: ${servers}`);
+        logger.info(`CacheService initialized with servers: ${servers}`);
     }
 
     /**
@@ -52,7 +53,7 @@ export class CacheService {
         return new Promise((resolve, reject) => {
             this.client.get(key, (err, data) => {
                 if (err) {
-                    console.error(`Error getting key ${key} from memcached:`, err);
+                    logger.error(`Error getting key ${key} from memcached:`, err);
                     return resolve(null);
                 }
 
@@ -68,23 +69,7 @@ export class CacheService {
         return new Promise((resolve) => {
             this.client.set(key, value, ttl, (err) => {
                 if (err) {
-                    console.error(`Error setting key ${key} in memcached:`, err);
-                    resolve(false);
-                } else {
-                    resolve(true);
-                }
-            });
-        });
-    }
-
-    /**
-     * Delete a key from memcached
-     */
-    delete(key: string): Promise<boolean> {
-        return new Promise((resolve) => {
-            this.client.del(key, (err) => {
-                if (err) {
-                    console.error(`Error deleting key ${key} from memcached:`, err);
+                    logger.error(`Error setting key ${key} in memcached:`, err);
                     resolve(false);
                 } else {
                     resolve(true);
@@ -123,7 +108,7 @@ export class CacheService {
             }
 
             if (blockNumber && blockNumber < ENS_UNIVERSAL_RESOLVER_BLOCK) {
-                console.log(`Block ${blockNumber} is before ENS Universal Resolver deployment, skipping ENS resolution for ${address}`);
+                logger.debug(`Block ${blockNumber} is before ENS Universal Resolver deployment, skipping ENS resolution for ${address}`);
                 return null;
             }
 
@@ -133,7 +118,7 @@ export class CacheService {
 
             return ensName;
         } catch (error) {
-            console.error(`Error getting/resolving ENS for ${address}:`, error);
+            logger.error(`Error getting/resolving ENS for ${address}:`, error);
             return null;
         }
     }
@@ -166,7 +151,7 @@ export class CacheService {
             );
 
             const priceUsd = response.data.ETH?.USD;
-            console.log(`Fetched ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd} from cryptocompare`);
+            logger.debug(`Fetched ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd} from cryptocompare`);
             if (priceUsd) {
                 const now = Math.floor(Date.now() / 1000);
                 const age = now - hourTimestamp;
@@ -179,14 +164,14 @@ export class CacheService {
                 }
 
                 await this.set(key, priceUsd, ttl);
-                console.log(`Cached ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd.toFixed(2)} from cryptocompare`);
+                logger.debug(`Cached ETH price for hour ${new Date(hourTimestamp * 1000).toISOString()}: $${priceUsd.toFixed(2)} from cryptocompare`);
 
                 return priceUsd;
             }
 
             return null;
         } catch (error) {
-            console.error(`Error getting ETH price for timestamp ${timestamp}:`, error);
+            logger.error(`Error getting ETH price for timestamp ${timestamp}:`, error);
             return null;
         }
     }

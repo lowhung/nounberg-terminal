@@ -4,6 +4,7 @@ import {EventData} from "@/types";
 import {CacheService} from "@/lib/cache";
 import {createDbContext} from "@/lib/db";
 import {getJobProcessingDependencies} from "@/lib/queue";
+import {logger} from "@/lib/logger";
 
 const dbContext = createDbContext();
 
@@ -19,7 +20,7 @@ export async function processEnrichEventJob(
         const success = await processEventData(eventData, cacheService, provider, axios);
         return {success, eventId};
     } catch (error) {
-        console.error(`Error in job processing wrapper:`, error);
+        logger.error(`Error in job processing wrapper:`, error);
         return {success: false, eventId: job.data.id};
     }
 }
@@ -36,7 +37,7 @@ async function processEventData(
     try {
         const existingEvent = await dbContext.auctionEvents.eventExists(eventId);
         if (existingEvent) {
-            console.log(`Event ${eventId} already exists, skipping enrichment`);
+            logger.info(`Event ${eventId} already exists, skipping enrichment`);
             return true;
         }
 
@@ -133,17 +134,17 @@ async function processEventData(
             await client.query(`NOTIFY event_created, '${eventId}'`);
 
             await client.query('COMMIT');
-            console.log(`Successfully inserted enriched event ${eventId}`);
+            logger.debug(`Successfully inserted enriched event ${eventId}`);
             return true;
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error(`Error inserting enriched event ${eventId}:`, error);
+            logger.error(`Error inserting enriched event ${eventId}:`, error);
             return false;
         } finally {
             client.release();
         }
     } catch (error) {
-        console.error(`Error processing enrichment job for event ${eventId}:`, error);
+        logger.error(`Error processing enrichment job for event ${eventId}:`, error);
         return false;
     }
 }

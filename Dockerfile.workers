@@ -22,4 +22,4 @@ COPY --from=dependencies /app/node_modules ./node_modules
 # Copy files from the filter stage
 COPY --from=filter /filter .
 
-CMD ["npx", "tsx", "src/workers/index.ts"]
+CMD ["npx", "tsx", "src/workers/index.ts", "--LOG_LEVEL=info"]

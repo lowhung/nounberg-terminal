@@ -1,14 +1,13 @@
 import {Hono} from 'hono';
-import {cors} from 'hono/cors';
 import {logger} from 'hono/logger';
-import {createDbContext, createDbPool} from '@/lib/db';
 import {graphql} from "ponder";
 import schema from "ponder:schema";
 import {db} from "ponder:api";
 import docsRouter from '@/docs/router';
-
-const dbContext = createDbContext();
-const pgPool = createDbPool();
+import {eq} from 'drizzle-orm';
+import {auctionEvents} from "../../ponder.schema";
+import {zodTransform} from "@/lib/serialization";
+import {PaginatedEventsSchema} from "@/models/auction-event.schema";
 
 const server = new Hono();
 
@@ -17,18 +16,22 @@ server.use("/graphql", graphql({db, schema}));
 
 server.get('/api/events', async (c) => {
     try {
-        const cursor = c.req.query('cursor');
+        const offset = c.req.query('offset');
         const limitParam = c.req.query('limit');
         const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 10;
-        const type = c.req.query('type');
 
-        const result = await dbContext.auctionEvents.getEvents({
-            cursor,
-            limit,
-            type,
+        const events = await db.query.auctionEvents.findMany({
+            limit: limit,
+            offset: offset ? parseInt(offset, 10) : 0,
         });
 
-        return c.json(result);
+        const transformedEvents = zodTransform(PaginatedEventsSchema)({
+            events,
+            count: events.length,
+            offset: offset ? parseInt(offset, 10) : 0
+        });
+
+        return c.json(transformedEvents);
     } catch (error) {
         console.error('Error fetching events:', error);
         return c.json({error: {code: 'INTERNAL_ERROR', message: 'Internal Server Error'}}, 500);
@@ -42,7 +45,9 @@ server.get('/api/events/:id', async (c) => {
             return c.json({error: {code: 'MISSING_PARAM', message: 'Event ID is required'}}, 400);
         }
 
-        const event = await dbContext.auctionEvents.getEventById(id);
+        const event = await db.query.auctionEvents.findFirst({
+            where: eq(auctionEvents.id, id),
+        });
         if (!event) {
             return c.json({error: {code: 'NOT_FOUND', message: 'Event not found'}}, 404);
         }
@@ -58,7 +63,7 @@ server.get('/api/health', async (c) => {
     try {
         const startTime = process.env.SERVER_START_TIME ? parseInt(process.env.SERVER_START_TIME, 10) : Date.now();
         const uptime = Math.floor((Date.now() - startTime) / 1000);
-        
+
         return c.json({
             status: 'ok',
             version: process.env.APP_VERSION || '1.0.0',
@@ -77,28 +82,6 @@ server.route('/docs', docsRouter);
 
 server.get('/', (c) => {
     return c.redirect('/docs');
-});
-
-process.on('SIGINT', async () => {
-    console.log('Shutting down API server...');
-    try {
-        await dbContext.close();
-        await pgPool.end();
-    } catch (error) {
-        console.error('Error during shutdown:', error);
-    }
-    process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-    console.log('Shutting down API server...');
-    try {
-        await dbContext.close();
-        await pgPool.end();
-    } catch (error) {
-        console.error('Error during shutdown:', error);
-    }
-    process.exit(0);
 });
 
 export default server;

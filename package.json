@@ -24,6 +24,7 @@
     "pg": "^8.16.0",
     "ponder": "0.10.27",
     "viem": "^2.21.3",
+    "winston": "^3.17.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

@@ -2,7 +2,6 @@ import { onchainTable } from "ponder";
 
 
 export const auctionEvents = onchainTable("auction_events", (t) => ({
-
   id: t.text().primaryKey(),
 
   type: t.text().notNull(),
@@ -15,7 +14,6 @@ export const auctionEvents = onchainTable("auction_events", (t) => ({
   startTime: t.integer(),
   endTime: t.integer(),
   
-
   bidder: t.hex(),
   bidderEns: t.text(),
   value: t.numeric(),

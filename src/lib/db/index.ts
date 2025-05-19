@@ -31,12 +31,6 @@ export function createDbContext(connectionString?: string): DbContext {
     return new DbContext(connectionString);
 }
 
-export function createDbPool(connectionString?: string): pg.Pool {
-    return new pg.Pool({
-        connectionString: connectionString || process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'
-    });
-}
-
 export function createDbClient(connectionString?: string): pg.Client {
     return new pg.Client({
         connectionString: connectionString || process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'

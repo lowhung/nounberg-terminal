@@ -2,6 +2,7 @@ import {Hono} from 'hono';
 import {createNodeWebSocket} from '@hono/node-ws';
 import {createDbClient} from '@/lib/db';
 import WebSocket from 'ws';
+import {logger} from '@/lib/logger';
 
 const subscribedClients = new Set<any>();
 
@@ -28,9 +29,9 @@ export function setupWebSockets(app: Hono) {
     app.get('/ws', upgradeWebSocket((c) => {
         return {
             onOpen(event, ws) {
-                console.log('WebSocket client connected');
+                logger.info('WebSocket client connected');
                 if (!ws.raw) {
-                    console.error('WebSocket client does not have a raw connection');
+                    logger.error('WebSocket client does not have a raw connection');
                     return;
                 }
                 subscribedClients.add(ws.raw);
@@ -48,17 +49,17 @@ export function setupWebSockets(app: Hono) {
                     } else if (typeof event === 'object') {
                         data = event;
                     } else {
-                        console.error('Received event of unexpected type:', typeof event);
+                        logger.error('Received event of unexpected type:', typeof event);
                         return;
                     }
                     if (data.type === 'subscribe') {
                         subscribedClients.add(ws);
                         ws.send(JSON.stringify({type: 'subscribed'}));
-                        console.debug('Client subscribed to events');
+                        logger.debug('Client subscribed to events');
                     } else if (data.type === 'unsubscribe') {
                         subscribedClients.delete(ws);
                         ws.send(JSON.stringify({type: 'unsubscribed'}));
-                        console.debug('Client unsubscribed from events');
+                        logger.debug('Client unsubscribed from events');
                     } else if (data.type === 'ping') {
                         ws.send(JSON.stringify({
                             type: 'pong',
@@ -66,22 +67,22 @@ export function setupWebSockets(app: Hono) {
                         }));
                     }
                 } catch (error) {
-                    console.error('Error handling WebSocket message:', error, 'Raw message:', event);
+                    logger.error('Error handling WebSocket message:', error, 'Raw message:', event);
                 }
             },
             onClose(event, ws) {
-                console.log('WebSocket client disconnected');
+                logger.info('WebSocket client disconnected');
                 subscribedClients.delete(ws);
             },
             onError(event, ws) {
-                console.error('WebSocket error:', event);
+                logger.error('WebSocket error:', event);
                 if (ws.raw) {
                     subscribedClients.delete(ws.raw);
                 }
             }
         };
     }));
-    console.log('WebSocket route registered at /ws');
+    logger.info('WebSocket route registered at /ws');
     return {injectWebSocket};
 }
 
@@ -98,7 +99,7 @@ export async function startNotificationListener(db: any) {
                 const event = await db.auctionEvents.getEventById(eventId);
 
                 if (!event) {
-                    console.warn(`Event ${eventId} not found in database`);
+                    logger.warn(`Event ${eventId} not found in database`);
                     return;
                 }
 
@@ -107,11 +108,11 @@ export async function startNotificationListener(db: any) {
                     data: event
                 });
             } catch (error) {
-                console.error('Error handling notification:', error);
+                logger.error('Error handling notification:', error);
             }
         });
 
-        console.log('WebSocket notification listener setup complete');
+        logger.info('WebSocket notification listener setup complete');
 
         process.on('SIGINT', async () => {
             await pgClient.end();
@@ -123,14 +124,12 @@ export async function startNotificationListener(db: any) {
 
         return pgClient;
     } catch (error) {
-        console.error('Error starting notification listener:', error);
+        logger.error('Error starting notification listener:', error);
         throw error;
     }
 }
 
 export function broadcastMessage(message: any) {
-    console.log(`Broadcasting message to ${subscribedClients.size} clients:`, message);
-
     if (message.type === 'event' && message.data) {
         message = {
             type: message.type,
@@ -145,7 +144,7 @@ export function broadcastMessage(message: any) {
                 client.send(JSON.stringify(message));
                 sentCount++;
             } catch (err) {
-                console.error('Error sending message to client:', err);
+                logger.error('Error sending message to client:', err);
                 subscribedClients.delete(client);
             }
         } else if (client.readyState !== WebSocket.CONNECTING) {
@@ -153,6 +152,6 @@ export function broadcastMessage(message: any) {
         }
     });
 
-    console.log(`Successfully sent message to ${sentCount} clients`);
+    logger.debug(`Successfully sent message to ${sentCount} clients`);
     return sentCount;
 }

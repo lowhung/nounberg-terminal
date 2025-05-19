@@ -1,32 +1,26 @@
-import {createWorker, setupQueueEvents, closeQueueResources} from '@/lib/queue';
+import {closeQueueResources, createWorker} from '@/lib/queue';
 import {createDbContext} from '@/lib/db';
-import {Worker, QueueEvents} from 'bullmq';
+import {Worker} from 'bullmq';
 import {processEnrichEventJob} from './processors/event-processor';
+import {logger} from "@/lib/logger";
 
 const dbContext = createDbContext();
 
 let workerInstance: Worker;
-let queueEventsInstance: QueueEvents;
-
-async function onJobComplete(eventId: string) {
-    console.log(`Processing completed for event ${eventId}`);
-}
 
 async function startWorker() {
     try {
-        console.log('Starting event enrichment worker...');
+        logger.info('Starting event enrichment worker...');
 
-        workerInstance = createWorker(processEnrichEventJob, onJobComplete);
+        workerInstance = createWorker(processEnrichEventJob);
 
-        queueEventsInstance = setupQueueEvents();
-
-        console.log('Worker started successfully');
+        logger.info('Worker started successfully');
 
         setInterval(() => {
-            console.log(`Worker status: ${workerInstance.isRunning() ? 'Running' : 'Not running'}`);
+            logger.info(`Worker status: ${workerInstance.isRunning() ? 'Running' : 'Not running'}`);
         }, 60000);
         const shutdown = async () => {
-            console.log('Shutting down worker...');
+            logger.info('Shutting down worker...');
 
             await closeQueueResources();
 
@@ -38,12 +32,12 @@ async function startWorker() {
         process.on('SIGINT', shutdown);
         process.on('SIGTERM', shutdown);
     } catch (error) {
-        console.error('Error starting worker:', error);
+        logger.error('Error starting worker:', error);
         process.exit(1);
     }
 }
 
 startWorker().catch(error => {
-    console.error('Fatal error in worker:', error);
+    logger.error('Fatal error in worker:', error);
     process.exit(1);
 });

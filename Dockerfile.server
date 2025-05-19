@@ -16,4 +16,4 @@ WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=filter /filter .
 
-CMD ["npx", "ponder", "start"]
+CMD ["npx", "ponder", "start", "--log-format", "json"]

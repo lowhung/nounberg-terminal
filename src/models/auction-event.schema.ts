@@ -9,32 +9,32 @@ export const AuctionEventBaseSchema = z.object({
     blockTimestamp: z.number(),
     logIndex: z.number(),
     headline: z.string(),
-    thumbnailUrl: z.string().optional(),
+    thumbnailUrl: z.string().optional().nullable(),
     createdAt: z.number(),
-    processedAt: z.number().optional(),
+    processedAt: z.number().optional().nullable(),
 });
 
 export const AuctionCreatedEventSchema = AuctionEventBaseSchema.extend({
     type: z.literal('created'),
-    startTime: z.number(),
-    endTime: z.number(),
+    startTime: z.number().optional().nullable(),
+    endTime: z.number().optional().nullable(),
 });
 
 export const AuctionBidEventSchema = AuctionEventBaseSchema.extend({
     type: z.literal('bid'),
     bidder: z.string(),
-    bidderEns: z.string().optional(),
+    bidderEns: z.string().optional().nullable(),
     value: z.string(),
-    valueUsd: z.number().optional(),
-    extended: z.boolean().optional(),
+    valueUsd: z.number().optional().nullable(),
+    extended: z.boolean().optional().nullable(),
 });
 
 export const AuctionSettledEventSchema = AuctionEventBaseSchema.extend({
     type: z.literal('settled'),
     winner: z.string(),
-    winnerEns: z.string().optional(),
+    winnerEns: z.string().optional().nullable(),
     amount: z.string(),
-    amountUsd: z.number().optional(),
+    amountUsd: z.number().optional().nullable(),
 });
 
 export const AuctionEventSchema = z.discriminatedUnion('type', [
@@ -44,35 +44,7 @@ export const AuctionEventSchema = z.discriminatedUnion('type', [
 ]);
 
 export const PaginatedEventsSchema = z.object({
-    events: z.array(AuctionEventSchema),
+    data: z.array(AuctionEventSchema),
     nextCursor: z.string().optional().nullable(),
     count: z.number(),
 });
-
-export type AuctionEvent = z.infer<typeof AuctionEventSchema>;
-export type AuctionCreatedEvent = z.infer<typeof AuctionCreatedEventSchema>;
-export type AuctionBidEvent = z.infer<typeof AuctionBidEventSchema>;
-export type AuctionSettledEvent = z.infer<typeof AuctionSettledEventSchema>;
-export type PaginatedEvents = z.infer<typeof PaginatedEventsSchema>;
-
-export const ErrorResponseSchema = z.object({
-    error: z.object({
-        code: z.string(),
-        message: z.string(),
-    }),
-});
-
-export const HealthCheckSchema = z.object({
-    status: z.enum(['ok', 'error']),
-    version: z.string(),
-    uptime: z.number(),
-    message: z.string().optional(),
-});
-
-export const WebSocketMessageSchema = z.object({
-    type: z.string(),
-    data: z.any().optional(),
-    message: z.string().optional(),
-    timestamp: z.string().optional(),
-});
-
