@@ -1,6 +1,6 @@
 import Memcached from "memcached";
 import {Address} from "viem";
-import {logger} from "@/lib/logger";
+import logger from "@/lib/logger";
 
 const DEFAULT_TTL = {
     ENS_NAME: 48 * 60 * 60,

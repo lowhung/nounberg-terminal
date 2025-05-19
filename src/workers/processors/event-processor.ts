@@ -4,7 +4,7 @@ import {EventData} from "@/types";
 import {CacheService} from "@/lib/cache";
 import {createDbContext} from "@/lib/db";
 import {getJobProcessingDependencies} from "@/lib/queue";
-import {logger} from "@/lib/logger";
+import logger from "@/lib/logger";
 
 const dbContext = createDbContext();
 

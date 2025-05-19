@@ -63,6 +63,7 @@ services:
       DATABASE_SCHEMA: public
       PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
       PONDER_LOG_LEVEL: info
+      SERVICE_NAME: server
       PORT: 3000
       MEMCACHED_SERVERS: memcached:11211
       REDIS_URL: redis://redis:6379
@@ -95,6 +96,7 @@ services:
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
+      SERVICE_NAME: workers
       ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
       MEMCACHED_SERVERS: memcached:11211
       REDIS_URL: redis://redis:6379

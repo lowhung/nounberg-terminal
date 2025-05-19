@@ -1,7 +1,7 @@
 import { ponder } from "ponder:registry";
 import { addEventEnrichmentJob } from "./lib/queue"; 
 import { EventData } from "./types";
-import {logger} from "@/lib/logger";
+import logger from "@/lib/logger";
 
 ponder.on("NounsAuctionHouse:AuctionCreated", async ({ event, context }) => {
     const { nounId, startTime, endTime } = event.args;

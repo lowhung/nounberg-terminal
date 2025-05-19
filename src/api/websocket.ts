@@ -2,7 +2,7 @@ import {Hono} from 'hono';
 import {createNodeWebSocket} from '@hono/node-ws';
 import {createDbClient} from '@/lib/db';
 import WebSocket from 'ws';
-import {logger} from '@/lib/logger';
+import logger from '@/lib/logger';
 
 const subscribedClients = new Set<any>();
 

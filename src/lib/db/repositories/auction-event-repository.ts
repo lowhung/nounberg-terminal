@@ -1,5 +1,5 @@
 import {Client, Pool, PoolClient} from 'pg';
-import {logger} from "@/lib/logger";
+import logger from "@/lib/logger";
 
 export class AuctionEventRepository {
     private poolOrClient: Pool | Client | PoolClient;

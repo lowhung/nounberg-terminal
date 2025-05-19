@@ -1,8 +1,8 @@
-import {closeQueueResources, createWorker} from '@/lib/queue';
+import {closeQueueResources, createWorker, QUEUE_NAMES} from '@/lib/queue';
 import {createDbContext} from '@/lib/db';
 import {Worker} from 'bullmq';
 import {processEnrichEventJob} from './processors/event-processor';
-import {logger} from "@/lib/logger";
+import logger from "@/lib/logger";
 
 const dbContext = createDbContext();
 
@@ -17,7 +17,7 @@ async function startWorker() {
         logger.info('Worker started successfully');
 
         setInterval(() => {
-            logger.info(`Worker status: ${workerInstance.isRunning() ? 'Running' : 'Not running'}`);
+            logger.info(`Worker health check: ${workerInstance.isRunning() ? 'Running' : 'Not running'}`);
         }, 60000);
         const shutdown = async () => {
             logger.info('Shutting down worker...');

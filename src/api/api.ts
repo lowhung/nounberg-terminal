@@ -1,5 +1,4 @@
 import {Hono} from 'hono';
-import {logger} from 'hono/logger';
 import {graphql} from "ponder";
 import schema from "ponder:schema";
 import {db} from "ponder:api";
@@ -8,10 +7,12 @@ import {eq} from 'drizzle-orm';
 import {auctionEvents} from "../../ponder.schema";
 import {zodTransform} from "@/lib/serialization";
 import {PaginatedEventsSchema} from "@/models/auction-event.schema";
+import logger from "@/lib/logger";
+import {logger as honoLogger} from "hono/logger";
 
 const server = new Hono();
 
-server.use('*', logger());
+server.use('*', honoLogger());
 server.use("/graphql", graphql({db, schema}));
 
 server.get('/api/events', async (c) => {
@@ -26,14 +27,14 @@ server.get('/api/events', async (c) => {
         });
 
         const transformedEvents = zodTransform(PaginatedEventsSchema)({
-            events,
+            data: events,
             count: events.length,
             offset: offset ? parseInt(offset, 10) : 0
         });
 
         return c.json(transformedEvents);
     } catch (error) {
-        console.error('Error fetching events:', error);
+        logger.error('Error fetching events:', error);
         return c.json({error: {code: 'INTERNAL_ERROR', message: 'Internal Server Error'}}, 500);
     }
 });
@@ -54,7 +55,7 @@ server.get('/api/events/:id', async (c) => {
 
         return c.json(event);
     } catch (error) {
-        console.error('Error fetching event:', error);
+        logger.error('Error fetching event:', error);
         return c.json({error: {code: 'INTERNAL_ERROR', message: 'Internal Server Error'}}, 500);
     }
 });
@@ -70,7 +71,7 @@ server.get('/api/health', async (c) => {
             uptime
         });
     } catch (error) {
-        console.error('Health check failed:', error);
+        logger.error('Health check failed:', error);
         return c.json({
             status: 'error',
             message: 'Health check failed'
