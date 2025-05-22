@@ -1,0 +1,1 @@
+{"version":3,"file":"exit.d.ts","sourceRoot":"","sources":["../../../../src/bin/utils/exit.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,sBAAsB,CAAC;AAKnD,0FAA0F;AAC1F,eAAO,MAAM,UAAU;YAGb,KAAK,MAAM,EAAE,QAAQ,GAAG,WAAW,GAAG,UAAU,CAAC;;YAIT,MAAM;UAAQ,CAAC,GAAG,CAAC;mBAkEpE,CAAC"}

@@ -1,0 +1,26 @@
+{
+  "name": "@nounberg/workers",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "bullmq": "^5.52.2",
+    "ioredis": "^5.6.1",
+    "viem": "^2.21.3",
+    "axios": "1.9.0",
+    "memcached": "^2.2.2",
+    "pg": "^8.16.0",
+    "pino": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/memcached": "^2.2.8",
+    "@types/pg": "^8.10.9",
+    "tsx": "^4.6.2",
+    "typescript": "^5.2.2"
+  }
+}
