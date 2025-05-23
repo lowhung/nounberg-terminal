@@ -2,10 +2,10 @@ import axios from 'axios';
 import {EventData} from "../types";
 import logger from "../logger";
 
-const WORKERS_JOB_API_URL = process.env.WORKERS_JOB_API_URL || 'http://workers-api:3001';
+const QUEUE_API_URL = process.env.QUEUE_API_URL || 'http://queue-api:3001';
 
 const httpClient = axios.create({
-    baseURL: WORKERS_JOB_API_URL,
+    baseURL: QUEUE_API_URL,
     timeout: 5000,
     headers: {
         'Content-Type': 'application/json',

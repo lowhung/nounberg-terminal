@@ -1,11 +1,16 @@
 import {serve} from '@hono/node-server';
 import {Hono} from 'hono';
-import {PaginatedEventsSchema, SingleEventResponseSchema} from './models/auction-event.schema';
+import {cors} from 'hono/cors';
 import docsRouter from './docs/router';
-import {setupWebSockets, startNotificationListener, broadcastMessage} from './websocket';
-import {zodTransform} from './utils';
+import {broadcastMessage, getConnectionStats, setupWebSockets, startNotificationListener} from './websocket';
+import {
+    transformCursorPaginatedResponse,
+    transformHealthResponse,
+    transformPaginatedResponse
+} from './models/transformers';
 import logger from "./logger";
 import {createDbContext} from "./db";
+import {CursorPaginationSchema, OffsetPaginationSchema} from "./models/auction-event.schema";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -13,28 +18,89 @@ const dbContext = createDbContext();
 
 const app = new Hono();
 
+
+// Enable CORS for frontend
+app.use('*', cors({
+    origin: ['http://localhost:8080', 'http://localhost:3000'],
+    credentials: true,
+}));
+
+app.route('/docs', docsRouter);
+app.get('/', (c) => {
+    return c.redirect('/docs');
+});
+
+// Enhanced events endpoint with cursor pagination
 app.get('/api/events', async (c) => {
     try {
-        const offset = c.req.query('offset');
-        const limitParam = c.req.query('limit');
-        const type = c.req.query('type');
-        const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 10;
+        const rawParams = c.req.query();
+        
+        const hasCursor = 'cursor' in rawParams;
+        const hasOffset = 'offset' in rawParams;
 
-        const result = await dbContext.auctionEvents.getEvents({
-            offset: offset ? parseInt(offset, 10) : 0,
-            limit: limit,
-            type: type || undefined
-        });
+        if (hasCursor || (!hasOffset && !('offset' in rawParams))) {
+            const validatedParams = CursorPaginationSchema.safeParse(rawParams);
+            
+            if (!validatedParams.success) {
+                return c.json({
+                    error: {
+                        code: 'INVALID_PARAMS',
+                        message: 'Invalid pagination parameters',
+                        details: validatedParams.error.errors
+                    }
+                }, 400);
+            }
 
-        const transformedEvents = zodTransform(PaginatedEventsSchema)({
-            data: result.events,
-            count: result.count,
-            offset: result.offset
-        });
+            const { limit, cursor, type, nounId, direction } = validatedParams.data;
 
-        return c.json(transformedEvents);
+            const result = await dbContext.auctionEvents.getEventsCursor({
+                limit,
+                cursor,
+                type,
+                nounId,
+                direction
+            });
+
+            logger.info(`Cursor pagination: fetched ${result.data.length} events, hasMore: ${result.pagination.hasMore}`);
+
+            const transformedResponse = transformCursorPaginatedResponse(result);
+            return c.json(transformedResponse);
+
+        } else {
+            const validatedParams = OffsetPaginationSchema.safeParse(rawParams);
+            
+            if (!validatedParams.success) {
+                return c.json({
+                    error: {
+                        code: 'INVALID_PARAMS', 
+                        message: 'Invalid pagination parameters',
+                        details: validatedParams.error.errors
+                    }
+                }, 400);
+            }
+
+            const { offset, limit, type, nounId } = validatedParams.data;
+
+            const result = await dbContext.auctionEvents.getEvents({
+                offset,
+                limit,
+                type,
+                nounId
+            });
+
+            logger.info(`Offset pagination: fetched ${result.count} events with offset ${offset} and limit ${limit}`);
+
+            const transformedResponse = transformPaginatedResponse({
+                data: result.events,
+                count: result.count,
+                offset: result.offset
+            });
+
+            return c.json(transformedResponse);
+        }
+
     } catch (error) {
-        logger.error('Error fetching events:', error);
+        logger.error(`Error fetching events: ${error}`);
         return c.json({
             error: {
                 code: 'INTERNAL_ERROR',
@@ -44,54 +110,40 @@ app.get('/api/events', async (c) => {
     }
 });
 
-app.get('/api/events/:id', async (c) => {
-    try {
-        const id = c.req.param('id');
-        if (!id) {
-            return c.json({
-                error: {
-                    code: 'MISSING_PARAM',
-                    message: 'Event ID is required'
-                }
-            }, 400);
-        }
-
-        const event = await dbContext.auctionEvents.getEventById(id);
-        if (!event) {
-            return c.json({
-                error: {
-                    code: 'NOT_FOUND',
-                    message: 'Event not found'
-                }
-            }, 404);
-        }
-
-        const transformedEvent = zodTransform(SingleEventResponseSchema)(event);
-        return c.json(transformedEvent);
-    } catch (error) {
-        logger.error('Error fetching event:', error);
-        return c.json({
-            error: {
-                code: 'INTERNAL_ERROR',
-                message: 'Internal Server Error'
-            }
-        }, 500);
-    }
-});
 
 app.get('/api/health', async (c) => {
     try {
         const startTime = process.env.SERVER_START_TIME ? parseInt(process.env.SERVER_START_TIME, 10) : Date.now();
         const uptime = Math.floor((Date.now() - startTime) / 1000);
 
-        const testQuery = await dbContext.auctionEvents.getEvents({limit: 1});
+        const testStart = Date.now();
+        const testQuery = await dbContext.auctionEvents.getEventsCursor({ limit: 1 });
+        const queryTime = Date.now() - testStart;
 
-        return c.json({
-            status: 'ok',
+        const wsStats = getConnectionStats();
+
+        const dbHealthy = await dbContext.auctionEvents.healthCheck();
+
+        const healthResponse = transformHealthResponse({
+            status: dbHealthy ? 'ok' : 'degraded',
             version: process.env.APP_VERSION || '1.0.0',
             uptime,
-            database: 'connected'
+            database: {
+                status: dbHealthy ? 'connected' : 'disconnected',
+                queryTime: `${queryTime}ms`,
+                totalEvents: testQuery.pagination.totalCount || 0
+            },
+            websocket: {
+                connections: wsStats.active,
+                total: wsStats.total
+            },
+            pagination: {
+                method: 'cursor-based',
+                performance: queryTime < 100 ? 'optimal' : queryTime < 500 ? 'good' : 'degraded'
+            }
         });
+
+        return c.json(healthResponse);
     } catch (error) {
         logger.error('Health check failed:', error);
         return c.json({
@@ -102,11 +154,6 @@ app.get('/api/health', async (c) => {
     }
 });
 
-app.route('/docs', docsRouter);
-
-app.get('/', (c) => {
-    return c.redirect('/docs');
-});
 
 async function start() {
     try {
@@ -127,11 +174,11 @@ async function start() {
 
         setTimeout(() => {
             broadcastMessage({
-                type: 'test',
-                message: 'This is a test message from the server',
+                type: 'system',
+                message: 'Nounberg Terminal is online',
                 timestamp: new Date().toISOString()
             });
-        }, 5000);
+        }, 2000);
 
         const shutdown = async () => {
             logger.info('Shutting down server...');

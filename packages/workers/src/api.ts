@@ -10,7 +10,7 @@ const app = new Hono();
 app.use('*', cors());
 
 app.get('/health', (c) => {
-    return c.json({status: 'ok', service: 'workers-api'});
+    return c.json({status: 'ok', service: 'queue-api'});
 });
 
 app.post('/jobs/enrich-event', async (c) => {

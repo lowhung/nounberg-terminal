@@ -7,16 +7,23 @@ export function useWebSocket() {
     const socketRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
     const reconnectAttemptsRef = useRef(0);
+    const isConnectingRef = useRef(false);
     const maxReconnectAttempts = 5;
 
     const connect = useCallback(() => {
+        if (isConnectingRef.current) {
+            console.log('Connection attempt already in progress, skipping');
+            return;
+        }
+
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
         }
 
         if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
-            socketRef.current.close();
+            console.log('WebSocket already connected or connecting');
+            return;
         }
 
         if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
@@ -24,9 +31,10 @@ export function useWebSocket() {
             return;
         }
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.hostname === 'localhost' ? 'localhost:3000' : window.location.host;
-        const wsUrl = `${wsProtocol}//${host}/ws`;
+        isConnectingRef.current = true;
+
+        const apiUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:3000';
+        const wsUrl = `${apiUrl}/ws`;
 
         console.log(`Connecting to WebSocket at ${wsUrl} (attempt ${reconnectAttemptsRef.current + 1})`);
 
@@ -37,9 +45,9 @@ export function useWebSocket() {
             socket.onopen = () => {
                 console.log('WebSocket connected successfully');
                 setIsConnected(true);
-                reconnectAttemptsRef.current = 0; // Reset counter on successful connection
+                isConnectingRef.current = false;
+                reconnectAttemptsRef.current = 0;
 
-                console.log('Subscribing to events');
                 socket.send(JSON.stringify({ type: 'subscribe' }));
             };
 
@@ -47,29 +55,37 @@ export function useWebSocket() {
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'welcome') {
-                        console.log('Connected to server:', data.message);
-                    } else if (data.type === 'subscribed') {
-                        console.log('Successfully subscribed to events');
-                    } else if (data.type === 'event' && data.data) {
-                        console.log('Received auction event:', data.data);
-
-                        setLastEvent(data.data);
-
-                        setEvents(prevEvents => {
-                            // Check if event already exists
-                            const exists = prevEvents.some(e => e.id === data.data.id);
-                            if (exists) {
-                                return prevEvents;
-                            }
+                    switch (data.type) {
+                        case 'welcome':
+                            console.log('Connected to server:', data.message);
+                            break;
                             
-                            // Add new event at the beginning and limit to 10
-                            const newEvents = [data.data, ...prevEvents].slice(0, 10);
-                            return newEvents;
-                        });
-                    } else if (data.type === 'ping') {
-                        // Respond to ping with pong to keep connection alive
-                        socket.send(JSON.stringify({ type: 'pong' }));
+                        case 'subscribed':
+                            console.log('Successfully subscribed to events');
+                            break;
+                            
+                        case 'event':
+                            if (data.data) {
+                                console.log('Received auction event:', data.data);
+                                setLastEvent(data.data);
+                                setEvents(prevEvents => {
+                                    const exists = prevEvents.some(e => e.id === data.data.id);
+                                    if (exists) return prevEvents;
+                                    return [data.data, ...prevEvents].slice(0, 10);
+                                });
+                            }
+                            break;
+                            
+                        case 'ping':
+                            socket.send(JSON.stringify({ type: 'pong' }));
+                            break;
+                            
+                        case 'pong':
+                            console.log('Received pong from server');
+                            break;
+                            
+                        default:
+                            console.log('Unknown message type:', data.type);
                     }
                 } catch (err) {
                     console.error('Error processing WebSocket message:', err);
@@ -77,12 +93,13 @@ export function useWebSocket() {
             };
 
             socket.onclose = (event) => {
-                console.log(`WebSocket disconnected with code ${event.code}. Reason: ${event.reason || 'No reason provided'}`);
+                console.log(`WebSocket disconnected (code: ${event.code}, reason: ${event.reason || 'none'})`);
                 setIsConnected(false);
+                isConnectingRef.current = false;
 
-                if (event.code !== 1000) { // 1000 is normal closure
-                    reconnectAttemptsRef.current++; 
-                    const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000); // Exponential backoff with max 30s
+                if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
+                    reconnectAttemptsRef.current++;
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
                     
                     console.log(`Scheduling reconnection attempt ${reconnectAttemptsRef.current} in ${delay}ms...`);
                     reconnectTimeoutRef.current = setTimeout(() => connect(), delay);
@@ -91,30 +108,38 @@ export function useWebSocket() {
 
             socket.onerror = (error) => {
                 console.error('WebSocket error:', error);
+                isConnectingRef.current = false;
             };
+
         } catch (err) {
-            console.error('Error establishing WebSocket connection:', err);
+            console.error('Error creating WebSocket connection:', err);
+            isConnectingRef.current = false;
             setIsConnected(false);
 
-            reconnectAttemptsRef.current++;
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-            reconnectTimeoutRef.current = setTimeout(() => connect(), delay);
+            if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+                reconnectAttemptsRef.current++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+                reconnectTimeoutRef.current = setTimeout(() => connect(), delay);
+            }
         }
     }, []);
 
     const disconnect = useCallback(() => {
+        console.log('Disconnecting WebSocket');
+        
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
         }
 
         if (socketRef.current) {
-            console.log('Closing WebSocket connection');
             socketRef.current.close(1000, 'User initiated disconnect');
             socketRef.current = null;
         }
 
+        isConnectingRef.current = false;
         setIsConnected(false);
+        reconnectAttemptsRef.current = 0;
     }, []);
 
     useEffect(() => {

@@ -3,7 +3,6 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import ConnectionStatus from './ConnectionStatus';
 import EventCard from './EventCard';
 import { fetchLatestEvents } from '../api/events';
-import './LiveFeed.css';
 
 export default function LiveFeed() {
     const { isConnected, events: webSocketEvents, reconnect } = useWebSocket();
@@ -42,44 +41,54 @@ export default function LiveFeed() {
             
             setCombinedEvents(uniqueEvents.slice(0, 10));
         }
-    }, [webSocketEvents]);
+    }, [combinedEvents, webSocketEvents]);
     
     return (
-        <div className="live-feed">
-            <ConnectionStatus isConnected={isConnected} />
-            
-            <div className="feed-header">
-                <h2 className="feed-title">Live Auction Events</h2>
-                <button 
-                    className="refresh-button" 
-                    onClick={reconnect}
-                    title="Reconnect WebSocket"
-                >
-                    ↻
-                </button>
+        <div className="min-h-screen bg-noun-bg p-4">
+            <div className="max-w-4xl mx-auto space-y-6">
+                {/* Connection Status */}
+                <ConnectionStatus isConnected={isConnected} />
+                
+                {/* Feed Header */}
+                <div className="flex items-center justify-between p-4 bg-noun-card rounded-lg border border-noun-border">
+                    <h2 className="text-2xl font-bold text-noun-text">Live Auction Events</h2>
+                    <button 
+                        onClick={reconnect}
+                        title="Reconnect WebSocket"
+                        className="p-2 bg-noun-accent hover:bg-green-600 text-white rounded-lg transition-all duration-200 hover:shadow-lg"
+                    >
+                        <span className="text-lg">↻</span>
+                    </button>
+                </div>
+                
+                {/* Content */}
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-16 bg-noun-card rounded-lg border border-noun-border">
+                        <div className="w-12 h-12 border-4 border-noun-border border-t-noun-accent rounded-full animate-spin mb-4"></div>
+                        <p className="text-noun-text font-medium">Loading latest events...</p>
+                    </div>
+                ) : combinedEvents.length > 0 ? (
+                    <div className="space-y-4">
+                        {combinedEvents.map((event, index) => (
+                            <EventCard 
+                                key={event.id} 
+                                event={event} 
+                                isNew={webSocketEvents.some(e => e.id === event.id)} 
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-16 bg-noun-card rounded-lg border border-noun-border">
+                        <div className="text-6xl mb-4">⏳</div>
+                        <p className="text-xl font-semibold text-noun-text mb-2">
+                            No events yet. Waiting for auction activity...
+                        </p>
+                        <p className="text-noun-text-muted">
+                            The feed will update automatically when new events occur.
+                        </p>
+                    </div>
+                )}
             </div>
-            
-            {loading ? (
-                <div className="loading-container">
-                    <div className="loading-spinner"></div>
-                    <p>Loading latest events...</p>
-                </div>
-            ) : combinedEvents.length > 0 ? (
-                <div className="events-list">
-                    {combinedEvents.map((event, index) => (
-                        <EventCard 
-                            key={event.id} 
-                            event={event} 
-                            isNew={webSocketEvents.some(e => e.id === event.id)} 
-                        />
-                    ))}
-                </div>
-            ) : (
-                <div className="no-events">
-                    <p>No events yet. Waiting for auction activity...</p>
-                    <p className="small">The feed will update automatically when new events occur.</p>
-                </div>
-            )}
         </div>
     );
 }

@@ -53,13 +53,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      queue-api:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
       PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
       PONDER_LOG_LEVEL: info
       SERVICE_NAME: ponder
-      WORKERS_JOB_API_URL: http://workers-api:3001
+      QUEUE_API_URL: http://queue-api:3001
     ports:
       - "42069:42069"
 
@@ -73,6 +75,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ponder:
+        condition: service_started
     ports:
       - "3000:3000"
     environment:
@@ -102,7 +106,6 @@ services:
       ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
       MEMCACHED_SERVERS: memcached:11211
       REDIS_URL: redis://redis:6379
-    # Use the deployment section to scale workers
     deploy:
       replicas: 3  # Start with 3 workers
       resources:
@@ -110,8 +113,7 @@ services:
           cpus: '0.5'
           memory: 256M
 
-  # Workers API for job submission
-  workers-api:
+  queue-api:
     build:
       context: ./packages/workers
       dockerfile: Dockerfile
@@ -120,10 +122,18 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      workers:
+        condition: service_started
     ports:
       - "3001:3001"  # Job API port
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     environment:
-      SERVICE_NAME: workers-api
+      SERVICE_NAME: queue-api
       REDIS_URL: redis://redis:6379
       PORT: 3001
 
@@ -135,7 +145,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "8080:3000"
     environment:
       REACT_APP_API_URL: http://localhost:3000
       REACT_APP_WS_URL: ws://localhost:3000
