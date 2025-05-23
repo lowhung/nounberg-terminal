@@ -55,12 +55,11 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
-      PONDER_DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
       PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
       PONDER_LOG_LEVEL: info
-      REDIS_URL: redis://redis:6379
       SERVICE_NAME: ponder
+      WORKERS_JOB_API_URL: http://workers-api:3001
     ports:
       - "42069:42069"
 
@@ -81,15 +80,13 @@ services:
       DATABASE_SCHEMA: public
       SERVICE_NAME: api
       PORT: 3000
-      REDIS_URL: redis://redis:6379
-      SERVER_START_TIME: ${SERVER_START_TIME:-$(date +%s)}
-      APP_VERSION: ${APP_VERSION:-1.0.0}
 
   # Background workers
   workers:
     build:
       context: ./packages/workers
       dockerfile: Dockerfile
+    command: npm run start
     restart: unless-stopped
     depends_on:
       postgres:
@@ -98,8 +95,6 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-      ponder:
-        condition: service_started
     environment:
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
       DATABASE_SCHEMA: public
@@ -114,6 +109,23 @@ services:
         limits:
           cpus: '0.5'
           memory: 256M
+
+  # Workers API for job submission
+  workers-api:
+    build:
+      context: ./packages/workers
+      dockerfile: Dockerfile
+    command: npm run start:api
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "3001:3001"  # Job API port
+    environment:
+      SERVICE_NAME: workers-api
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
 
   frontend:
     build:

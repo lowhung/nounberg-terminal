@@ -2,6 +2,8 @@ import {ponder} from "ponder:registry";
 import {formatEther} from "viem";
 import {auctionEvents} from "../ponder.schema";
 import logger from "./logger";
+import {EventData} from "./types";
+import {addEventEnrichmentJob} from "./client/workers";
 
 ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
     const {nounId, startTime, endTime} = event.args;
@@ -36,22 +38,22 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
         logger.error(`Error inserting auction created event: ${err}`);
     });
 
-    // const eventData: EventData = {
-    //     id,
-    //     type: "created",
-    //     nounId: Number(nounId),
-    //     txHash,
-    //     blockNumber: Number(blockNumber),
-    //     blockTimestamp: blockTimestamp.toString(),
-    //     logIndex,
-    //     startTime: Number(startTime),
-    //     endTime: Number(endTime),
-    //     thumbnailUrl,
-    //     createdAt: Math.floor(Date.now() / 1000)
-    // };
-    //
-    // await addEventEnrichmentJob(eventData);
-    // logger.debug(`Queued AuctionCreated for Noun #${nounId.toString()}`);
+    const eventData: EventData = {
+        id,
+        type: "created",
+        nounId: Number(nounId),
+        txHash,
+        blockNumber: Number(blockNumber),
+        blockTimestamp: blockTimestamp.toString(),
+        logIndex,
+        startTime: Number(startTime),
+        endTime: Number(endTime),
+        thumbnailUrl,
+        createdAt: Math.floor(Date.now() / 1000)
+    };
+
+    await addEventEnrichmentJob(eventData);
+    logger.debug(`Queued AuctionCreated for Noun #${nounId.toString()}`);
 });
 
 ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
@@ -89,23 +91,23 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
         extended
     });
 
-    // const eventData: EventData = {
-    //     id,
-    //     type: "bid",
-    //     nounId: Number(nounId),
-    //     txHash,
-    //     blockNumber: Number(blockNumber),
-    //     blockTimestamp: blockTimestamp.toString(),
-    //     logIndex,
-    //     bidder: sender,
-    //     value: value.toString(),
-    //     extended,
-    //     thumbnailUrl,
-    //     createdAt: Math.floor(Date.now() / 1000)
-    // };
-    //
-    // await addEventEnrichmentJob(eventData);
-    // logger.debug(`Queued AuctionBid for Noun #${nounId.toString()} by ${displayBidder}`);
+    const eventData: EventData = {
+        id,
+        type: "bid",
+        nounId: Number(nounId),
+        txHash,
+        blockNumber: Number(blockNumber),
+        blockTimestamp: blockTimestamp.toString(),
+        logIndex,
+        bidder: sender,
+        value: value.toString(),
+        extended,
+        thumbnailUrl,
+        createdAt: Math.floor(Date.now() / 1000)
+    };
+
+    await addEventEnrichmentJob(eventData);
+    logger.debug(`Queued AuctionBid for Noun #${nounId.toString()} by ${displayBidder}`);
 });
 
 ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
@@ -141,20 +143,20 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
         amount: amount.toString()
     });
 
-    // const eventData: EventData = {
-    //     id,
-    //     type: "settled",
-    //     nounId: Number(nounId),
-    //     txHash,
-    //     blockNumber: Number(blockNumber),
-    //     blockTimestamp: blockTimestamp.toString(),
-    //     logIndex,
-    //     winner,
-    //     amount: amount.toString(),
-    //     thumbnailUrl,
-    //     createdAt: Math.floor(Date.now() / 1000)
-    // };
-    //
-    // await addEventEnrichmentJob(eventData);
-    // logger.debug(`Queued AuctionSettled for Noun #${nounId.toString()} to ${displayWinner}`);
+    const eventData: EventData = {
+        id,
+        type: "settled",
+        nounId: Number(nounId),
+        txHash,
+        blockNumber: Number(blockNumber),
+        blockTimestamp: blockTimestamp.toString(),
+        logIndex,
+        winner,
+        amount: amount.toString(),
+        thumbnailUrl,
+        createdAt: Math.floor(Date.now() / 1000)
+    };
+
+    await addEventEnrichmentJob(eventData);
+    logger.debug(`Queued AuctionSettled for Noun #${nounId.toString()} to ${displayWinner}`);
 });

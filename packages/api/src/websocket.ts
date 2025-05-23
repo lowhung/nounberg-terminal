@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { createNodeWebSocket } from '@hono/node-ws';
 import WebSocket from 'ws';
 import { createDbClient, type DbContext } from './db';
-import logger from "./shared/logger";
+import logger from "./logger";
 
 const subscribedClients = new Set<any>();
 

@@ -7,24 +7,27 @@ export default function EventFeed() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cursor, setCursor] = useState(null);
+  const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
   const loadEvents = async (reset = false) => {
     if (reset) {
       setLoading(true);
-      setCursor(null);
+      setOffset(0);
     }
     
     try {
-      const newCursor = reset ? null : cursor;
-      const data = await fetchLatestEvents(10, newCursor);
+      const currentOffset = reset ? 0 : offset;
+      const response = await fetchLatestEvents(10, currentOffset);
       
-      if (data.length === 0) {
+      if (response.events.length === 0) {
         setHasMore(false);
       } else {
-        setEvents(prev => reset ? data : [...prev, ...data]);
-        setCursor(data[data.length - 1]?.id);
+        setEvents(prev => reset ? response.events : [...prev, ...response.events]);
+        setOffset(currentOffset + response.events.length);
+        setTotalCount(response.count);
+        setHasMore(currentOffset + response.events.length < response.count);
       }
       
       setError(null);
@@ -48,7 +51,12 @@ export default function EventFeed() {
 
   return (
     <div className="event-feed">
-      <h2 className="feed-title">Recent Auction Events</h2>
+      <div className="feed-header">
+        <h2 className="feed-title">Recent Auction Events</h2>
+        {totalCount > 0 && (
+          <p className="event-count">{totalCount} total events</p>
+        )}
+      </div>
       
       {error && (
         <div className="error-message">
@@ -79,7 +87,7 @@ export default function EventFeed() {
                 disabled={loading}
                 className={loading ? 'loading' : ''}
               >
-                {loading ? 'Loading...' : 'Load More'}
+                {loading ? 'Loading...' : `Load More (${events.length} of ${totalCount})`}
               </button>
             </div>
           )}

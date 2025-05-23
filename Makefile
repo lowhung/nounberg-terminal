@@ -66,6 +66,7 @@ prod: build up ## Build and start full production stack
 	@echo "  🔗 Ponder (GraphQL): http://localhost:42069"
 	@echo "  🌐 API Server: http://localhost:3000"
 	@echo "  🎨 Frontend: http://localhost:8080"
+	@echo "  ⚙️  Workers Job API: http://localhost:3001"
 	@echo "  📊 API Health: http://localhost:3000/api/health"
 	@echo ""
 	@echo "To check logs: $(YELLOW)make logs$(RESET)"

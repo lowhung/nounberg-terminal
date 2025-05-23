@@ -11,10 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "axios": "^1.9.0",
     "ponder": "0.10.27",
-    "viem": "^2.21.3",
-    "bullmq": "^5.52.2",
-    "ioredis": "^5.6.1"
+    "viem": "^2.21.3"
   },
   "devDependencies": {
     "eslint-config-ponder": "0.10.27",

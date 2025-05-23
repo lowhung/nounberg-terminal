@@ -50,5 +50,4 @@ export const PaginatedEventsSchema = z.object({
     offset: z.number().optional(),
 });
 
-// For single event responses
 export const SingleEventResponseSchema = AuctionEventSchema;

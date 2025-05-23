@@ -5,7 +5,6 @@ import {closeQueueResources, createWorker} from "./queue";
 import {processEnrichEventJob} from "./processors/event-processor";
 
 const dbContext = createDbContext();
-
 let workerInstance: Worker;
 
 async function startWorker() {
@@ -19,13 +18,11 @@ async function startWorker() {
         setInterval(() => {
             logger.info(`Worker health check: ${workerInstance.isRunning() ? 'Running' : 'Not running'}`);
         }, 60000);
+        
         const shutdown = async () => {
             logger.info('Shutting down worker...');
-
             await closeQueueResources();
-
             await dbContext.close();
-
             process.exit(0);
         };
 

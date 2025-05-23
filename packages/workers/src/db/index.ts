@@ -2,7 +2,7 @@ import pg from 'pg';
 import {AuctionEvent} from "./repositories";
 
 export class DbContext {
-    private pool: pg.Pool;
+    private readonly pool: pg.Pool;
     private _auctionEvents: AuctionEvent | null = null;
 
     constructor(connectionString?: string) {
@@ -29,10 +29,4 @@ export class DbContext {
 
 export function createDbContext(connectionString?: string): DbContext {
     return new DbContext(connectionString);
-}
-
-export function createDbClient(connectionString?: string): pg.Client {
-    return new pg.Client({
-        connectionString: connectionString || process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'
-    });
 }

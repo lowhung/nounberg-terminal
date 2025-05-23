@@ -1,11 +1,41 @@
+# Dependencies - exclude all node_modules directories
+**/node_modules
 node_modules
+
+# Git
 .git
 .gitignore
-README.md
-.env
-.env.local
-.env.example
-dist
-*.log
+
+# IDE
 .idea
 .vscode
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# Misc
+.DS_Store
+README.md
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.example
+
+# Build outputs (will be rebuilt in container)
+**/dist
+dist
+
+# Ponder specific
+/generated/
+/.ponder/
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml

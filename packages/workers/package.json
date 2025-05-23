@@ -5,20 +5,25 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "dev:api": "tsx src/api.ts",
     "start": "node dist/index.js",
+    "start:api": "node dist/api.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "bullmq": "^5.52.2",
-    "ioredis": "^5.6.1",
-    "viem": "^2.21.3",
+    "@hono/node-server": "^1.9.0",
     "axios": "1.9.0",
+    "bullmq": "^5.52.2",
+    "hono": "^4.5.0",
+    "ioredis": "^5.6.1",
     "memcached": "^2.2.2",
     "pg": "^8.16.0",
-    "pino": "^8.21.0"
+    "pino": "^8.21.0",
+    "viem": "^2.21.3"
   },
   "devDependencies": {
     "@types/memcached": "^2.2.8",
+    "@types/node": "^22.15.21",
     "@types/pg": "^8.10.9",
     "tsx": "^4.6.2",
     "typescript": "^5.2.2"

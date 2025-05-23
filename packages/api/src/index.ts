@@ -4,7 +4,7 @@ import {PaginatedEventsSchema, SingleEventResponseSchema} from './models/auction
 import docsRouter from './docs/router';
 import {setupWebSockets, startNotificationListener, broadcastMessage} from './websocket';
 import {zodTransform} from './utils';
-import logger from "./shared/logger";
+import logger from "./logger";
 import {createDbContext} from "./db";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);

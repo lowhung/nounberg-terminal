@@ -14,8 +14,8 @@ export default function LiveFeed() {
         const loadInitialEvents = async () => {
             try {
                 setLoading(true);
-                const historicalEvents = await fetchLatestEvents(10);
-                setCombinedEvents(historicalEvents);
+                const response = await fetchLatestEvents(10);
+                setCombinedEvents(response.events);
             } catch (error) {
                 console.error('Failed to load initial events:', error);
             } finally {

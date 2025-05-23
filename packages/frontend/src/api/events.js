@@ -1,3 +1,5 @@
+import apiClient from './client';
+
 /**
  * API methods for interacting with auction events
  */
@@ -5,27 +7,27 @@
 /**
  * Fetch the most recent auction events
  * @param {number} limit - Maximum number of events to fetch
- * @param {string} cursor - Pagination cursor
- * @returns {Promise<Array>} - Array of events
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<Object>} - Response with events and pagination info
  */
-export async function fetchLatestEvents(limit = 10, cursor = null) {
+export async function fetchLatestEvents(limit = 10, offset = 0) {
   try {
-    let url = `/api/events?limit=${limit}`;
-    if (cursor) {
-      url += `&cursor=${cursor}`;
-    }
+    const response = await apiClient.get('/api/events', {
+      params: { limit, offset }
+    });
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.items || [];
+    return {
+      events: response.data.data || [],
+      count: response.data.count || 0,
+      offset: response.data.offset || 0
+    };
   } catch (error) {
     console.error('Error fetching events:', error);
-    return [];
+    return {
+      events: [],
+      count: 0,
+      offset: 0
+    };
   }
 }
 
@@ -36,18 +38,12 @@ export async function fetchLatestEvents(limit = 10, cursor = null) {
  */
 export async function fetchEvent(eventId) {
   try {
-    const response = await fetch(`/api/events/${eventId}`);
-    
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data;
+    const response = await apiClient.get(`/api/events/${eventId}`);
+    return response.data;
   } catch (error) {
+    if (error.response?.status === 404) {
+      return null;
+    }
     console.error(`Error fetching event ${eventId}:`, error);
     return null;
   }
@@ -55,49 +51,70 @@ export async function fetchEvent(eventId) {
 
 /**
  * Fetch events by type
- * @param {string} type - Event type (AuctionCreated, AuctionBid, AuctionSettled)
+ * @param {string} type - Event type (created, bid, settled)
  * @param {number} limit - Maximum number of events to fetch
- * @param {string} cursor - Pagination cursor
- * @returns {Promise<Array>} - Array of events
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<Object>} - Response with events and pagination info
  */
-export async function fetchEventsByType(type, limit = 10, cursor = null) {
+export async function fetchEventsByType(type, limit = 10, offset = 0) {
   try {
-    let url = `/api/events?type=${encodeURIComponent(type)}&limit=${limit}`;
-    if (cursor) {
-      url += `&cursor=${cursor}`;
-    }
+    const response = await apiClient.get('/api/events', {
+      params: { type, limit, offset }
+    });
     
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.items || [];
+    return {
+      events: response.data.data || [],
+      count: response.data.count || 0,
+      offset: response.data.offset || 0
+    };
   } catch (error) {
     console.error(`Error fetching events of type ${type}:`, error);
-    return [];
+    return {
+      events: [],
+      count: 0,
+      offset: 0
+    };
   }
 }
 
 /**
  * Fetch events for a specific Noun
  * @param {number} nounId - The Noun ID to fetch events for
- * @returns {Promise<Array>} - Array of events
+ * @param {number} limit - Maximum number of events to fetch
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<Object>} - Response with events and pagination info
  */
-export async function fetchEventsByNoun(nounId) {
+export async function fetchEventsByNoun(nounId, limit = 10, offset = 0) {
   try {
-    const response = await fetch(`/api/events?nounId=${nounId}`);
+    const response = await apiClient.get('/api/events', {
+      params: { nounId, limit, offset }
+    });
     
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.items || [];
+    return {
+      events: response.data.data || [],
+      count: response.data.count || 0,
+      offset: response.data.offset || 0
+    };
   } catch (error) {
     console.error(`Error fetching events for Noun #${nounId}:`, error);
-    return [];
+    return {
+      events: [],
+      count: 0,
+      offset: 0
+    };
+  }
+}
+
+/**
+ * Check API health
+ * @returns {Promise<Object>} - Health status
+ */
+export async function checkHealth() {
+  try {
+    const response = await apiClient.get('/api/health');
+    return response.data;
+  } catch (error) {
+    console.error('Error checking API health:', error);
+    return { status: 'error', message: 'API unavailable' };
   }
 }

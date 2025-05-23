@@ -1,7 +1,7 @@
 import {Hono} from 'hono';
 import {join} from 'path';
 import {readFileSync} from 'fs';
-import logger from '../shared/logger';
+import logger from "../logger";
 
 export const docsRouter = new Hono();
 

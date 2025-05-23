@@ -1,5 +1,4 @@
 # Dependencies - exclude all node_modules directories
-**/node_modules
 node_modules
 
 # Git
@@ -33,6 +32,9 @@ dist
 
 # React build output
 /build
+
+# Testing
+/coverage
 
 # Docker
 Dockerfile*

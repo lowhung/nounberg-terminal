@@ -6,6 +6,7 @@ import {mainnet} from 'viem/chains';
 import axios from 'axios';
 import {QUEUE_NAMES} from "./constants";
 import {EventData} from "./types";
+import logger from './logger';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL || process.env.PONDER_RPC_URL_1;
@@ -21,7 +22,7 @@ let redisConnection: Redis | null = null;
 function getRedisConnection(): Redis {
     if (!redisConnection) {
         redisConnection = createRedisConnection();
-        console.info('Created new Redis connection for queue operations');
+        logger.info('Created new Redis connection for queue operations');
     }
     return redisConnection;
 }
@@ -40,16 +41,16 @@ export function getEventEnrichmentQueue(): Queue {
                 },
             }
         });
-        console.info('Created event enrichment queue');
+        logger.info('Created event enrichment queue');
 
         const cleanupQueue = async () => {
             if (eventEnrichmentQueue) {
-                console.info('Closing event enrichment queue');
+                logger.info('Closing event enrichment queue');
                 await eventEnrichmentQueue.close();
                 eventEnrichmentQueue = null;
             }
             if (redisConnection) {
-                console.info('Closing Redis connection for queue');
+                logger.info('Closing Redis connection for queue');
                 redisConnection.disconnect();
                 redisConnection = null;
             }
@@ -67,14 +68,14 @@ export async function addEventEnrichmentJob(eventData: EventData) {
         const job = await queue.add(QUEUE_NAMES.EVENT_ENRICHMENT, eventData, {
             jobId: eventData.id,
         });
-        console.debug(`Added job ${job.id} to enrich event ${eventData.id}`);
+        logger.debug(`Added job ${job.id} to enrich event ${eventData.id}`);
         return job;
     } catch (error: any) {
         if (error.name === 'BullMQDuplicateJob') {
-            console.warn(`Job for event ${eventData.id} already exists, skipping`);
+            logger.warn(`Job for event ${eventData.id} already exists, skipping`);
             return null;
         }
-        console.error(`Error adding job for event ${eventData.id}:`, error);
+        logger.error(`Error adding job for event ${eventData.id}:`, error);
         throw error;
     }
 }
@@ -86,18 +87,18 @@ export function createWorker(
     const worker = new Worker(
         QUEUE_NAMES.EVENT_ENRICHMENT,
         async (job: Job) => {
-            console.debug(`Processing job ${job.id} for event enrichment`);
+            logger.debug(`Processing job ${job.id} for event enrichment`);
 
             try {
                 const result = await processCallback(job);
 
                 if (onJobComplete) {
-                    console.debug(`Processing completed for event ${job.data.id}`);
+                    logger.debug(`Processing completed for event ${job.data.id}`);
                 }
 
                 return result;
             } catch (error) {
-                console.error(`Error processing job ${job.id}:`, error);
+                logger.error(`Error processing job ${job.id}:`, error);
                 throw error;
             }
         },
@@ -107,15 +108,15 @@ export function createWorker(
     );
 
     worker.on('completed', (job) => {
-        console.debug(`Job ${job.id} completed successfully`);
+        logger.debug(`Job ${job.id} completed successfully`);
     });
 
     worker.on('failed', (job, error) => {
-        console.error(`Job ${job?.id} failed with error:`, error);
+        logger.error(`Job ${job?.id} failed with error:`, error);
     });
 
     worker.on('error', (error) => {
-        console.error('Worker error:', error);
+        logger.error('Worker error:', error);
     });
 
     return worker;

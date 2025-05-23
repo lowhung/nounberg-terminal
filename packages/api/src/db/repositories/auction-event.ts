@@ -1,5 +1,5 @@
 import {Client, Pool, PoolClient} from 'pg';
-import logger from "../../shared/logger";
+import logger from "../../logger";
 
 export class AuctionEvent {
     private poolOrClient: Pool | Client | PoolClient;
@@ -52,67 +52,6 @@ export class AuctionEvent {
         }
     }
 
-    /**
-     * Get paginated auction events with cursor-based pagination
-     */
-    async getEventsCursor({
-                              cursor,
-                              limit = 10,
-                              type
-                          }: {
-        cursor?: string;
-        limit?: number;
-        type?: string;
-    }) {
-        let query = `
-            SELECT *
-            FROM ${this.schema}.auction_events
-            WHERE 1 = 1
-        `;
-        const params: any[] = [];
-
-        if (type) {
-            query += ` AND type = $${params.length + 1}`;
-            params.push(type);
-        }
-
-        if (cursor) {
-            try {
-                const [timestamp, logIndex] = cursor.split('_').map(Number);
-
-                if ((timestamp !== undefined && !isNaN(timestamp)) && (logIndex !== undefined && !isNaN(logIndex))) {
-                    query += ` AND (block_timestamp < $${params.length + 1} OR (block_timestamp = $${params.length + 1} AND log_index < $${params.length + 2}))`;
-                    params.push(timestamp, logIndex);
-                }
-            } catch (error) {
-                logger.error('Invalid cursor format:', error);
-            }
-        }
-
-        query += ` ORDER BY block_timestamp DESC, log_index DESC`;
-        query += ` LIMIT $${params.length + 1}`;
-        params.push(limit);
-
-        try {
-            const result = await this.poolOrClient.query(query, params);
-
-            let nextCursor = null;
-            if (result.rows.length === limit) {
-                const lastItem = result.rows[result.rows.length - 1];
-                nextCursor = `${lastItem.block_timestamp}_${lastItem.log_index}`;
-            }
-
-            return {
-                events: result.rows,
-                nextCursor,
-                count: result.rows.length
-            };
-        } catch (error) {
-            logger.error('Error fetching auction events:', error);
-            throw new Error(`Database error when fetching events: ${(error as Error).message}`);
-        }
-    }
-
     async getEventById(id: string) {
         try {
             let attempts = 0;
@@ -144,25 +83,6 @@ export class AuctionEvent {
         } catch (error) {
             logger.error(`Error fetching auction event ${id}:`, error);
             throw new Error(`Database error when fetching event: ${(error as Error).message}`);
-        }
-    }
-
-    /**
-     * Check if an event exists
-     */
-    async eventExists(id: string): Promise<boolean> {
-        try {
-            const result = await this.poolOrClient.query(
-                `SELECT 1
-                 FROM ${this.schema}.auction_events
-                 WHERE id = $1
-                 LIMIT 1`,
-                [id]
-            );
-            return result.rowCount !== null && result.rowCount > 0;
-        } catch (error) {
-            logger.error(`Error checking if event ${id} exists:`, error);
-            return false;
         }
     }
 }
