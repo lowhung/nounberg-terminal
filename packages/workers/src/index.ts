@@ -1,5 +1,5 @@
 import {Worker} from 'bullmq';
-import logger from './logger';
+import {logger} from './logger';
 import { createDbContext } from './db';
 import {closeQueueResources, createWorker} from "./queue";
 import {processEnrichEventJob} from "./processors/auction-events";

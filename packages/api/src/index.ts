@@ -8,9 +8,9 @@ import {
     transformHealthResponse,
     transformPaginatedResponse
 } from './models/transformers';
-import logger from "./logger";
 import {createDbContext} from "./db";
 import {CursorPaginationSchema, OffsetPaginationSchema} from "./models/auction-event.schema";
+import {logger} from "./logger";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -60,7 +60,6 @@ app.get('/api/events', async (c) => {
                 nounId,
                 direction
             });
-
             logger.info(`Cursor pagination: fetched ${result.data.length} events, hasMore: ${result.pagination.hasMore}`);
 
             const transformedResponse = transformCursorPaginatedResponse(result);

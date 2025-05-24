@@ -6,7 +6,7 @@ import {mainnet} from 'viem/chains';
 import axios from 'axios';
 import {QUEUE_NAMES} from "./constants";
 import {EventData} from "./types";
-import logger from './logger';
+import {logger} from './logger';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL || process.env.PONDER_RPC_URL_1;

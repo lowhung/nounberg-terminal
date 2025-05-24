@@ -3,7 +3,7 @@ import { createNodeWebSocket } from '@hono/node-ws';
 import WebSocket from 'ws';
 import { createDbClient, type DbContext } from './db';
 import { transformEvent } from './models/transformers';
-import logger from "./logger";
+import {logger} from './logger';
 
 const subscribedClients = new Set<WebSocket>();
 
@@ -35,7 +35,7 @@ function sendMessage(ws: any, message: WSResponse) {
     }
 }
 
-function parseMessage(event: any): WSMessage | null {
+function parseMessage(event: Event): WSMessage | null {
     try {
         let raw: string;
         if (Buffer.isBuffer(event)) {
@@ -45,7 +45,7 @@ function parseMessage(event: any): WSMessage | null {
         } else if (typeof event === 'object' && event !== null) {
             raw = JSON.stringify(event);
         } else {
-            logger.warn('Received unexpected message type:', typeof event);
+            logger.warn(`Received unexpected message type: ${event.type}`);
             return null;
         }
 
@@ -63,7 +63,7 @@ function parseMessage(event: any): WSMessage | null {
 
         return parsed;
     } catch (error) {
-        logger.error('Failed to parse WebSocket message:', error, 'Raw:', event);
+        logger.error(`Failed to parse WebSocket message:`, error);
         return null;
     }
 }
@@ -100,7 +100,7 @@ export function setupWebSockets(app: Hono) {
             const message: WSMessage = parseMessage(event);
             if (!message) return;
 
-            logger.debug('Received WebSocket message:', message);
+            logger.debug(`Received WebSocket message: ${JSON.stringify(message)}`);
 
             switch (message.type) {
                 case 'subscribe':
@@ -127,7 +127,7 @@ export function setupWebSockets(app: Hono) {
                     break;
 
                 default:
-                    logger.warn('Unknown WebSocket message type:', message);
+                    logger.warn(`Unknown WebSocket message type: ${message}`);
             }
         },
 
@@ -137,7 +137,7 @@ export function setupWebSockets(app: Hono) {
         },
 
         onError(event, ws) {
-            logger.error('WebSocket error:', event);
+            logger.error(`WebSocket error: ${JSON.stringify(event)}`);
             removeClient(ws);
         }
     })));

@@ -1,6 +1,6 @@
 import Memcached from "memcached";
 import {Address} from "viem";
-import logger from "./logger";
+import {logger} from "./logger";
 
 const DEFAULT_TTL = {
     ENS_NAME: 48 * 60 * 60,
@@ -17,7 +17,7 @@ const ENS_UNIVERSAL_RESOLVER_BLOCK = 19258213;
 export class CacheService {
     private client: Memcached;
 
-    constructor(servers: string = process.env.MEMCACHED_SERVERS || 'localhost:11211') {
+    constructor(servers: string = process.env.CACHE_URL || "localhost:11211") {
         this.client = new Memcached(servers, {
             retries: 3,
             retry: 1000,
@@ -28,12 +28,12 @@ export class CacheService {
             poolSize: 10
         });
 
-        this.client.on('failure', (details) => {
-            logger.error('Memcached connection failure:', details);
+        this.client.on("failure", (details) => {
+            logger.error({ "message": "Cache failure", details });
         });
 
-        this.client.on('reconnecting', (details) => {
-            logger.info('Memcached reconnecting:', details);
+        this.client.on("reconnecting", (details) => {
+            logger.info({ "message": "Cache reconnecting", details });
         });
 
         logger.info(`CacheService initialized with servers: ${servers}`);
@@ -82,7 +82,7 @@ export class CacheService {
      * Round a timestamp to the nearest hour
      */
     private roundToHour(timestamp: number | bigint): number {
-        if (typeof timestamp === 'bigint') {
+        if (typeof timestamp === "bigint") {
             timestamp = Number(timestamp);
         }
         return Math.floor(timestamp / 3600) * 3600;
@@ -139,13 +139,13 @@ export class CacheService {
             }
 
             const response = await axios.get(
-                'https://min-api.cryptocompare.com/data/pricehistorical',
+                "https://min-api.cryptocompare.com/data/pricehistorical",
                 {
                     params: {
                         ts: timestamp,
-                        fsym: 'ETH',
-                        tsyms: 'USD',
-                        api_key: '193c7d86141cc605958fee66739113c13a0dbee55f0d66075fa19e7721ceced5'
+                        fsym: "ETH",
+                        tsyms: "USD",
+                        api_key: "193c7d86141cc605958fee66739113c13a0dbee55f0d66075fa19e7721ceced5"
                     }
                 }
             );

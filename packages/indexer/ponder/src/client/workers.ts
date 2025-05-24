@@ -17,8 +17,6 @@ export async function addEventEnrichmentJob(eventData: EventData) {
     }
     try {
         const response = await httpClient.post('/jobs/enrich-event', eventData);
-
-        console.debug(`Successfully enqueued job for event ${eventData.id}: ${response.data.jobId}`);
         return response.data;
 
     } catch (error: any) {

@@ -10,4 +10,4 @@ services:
 
 networks:
   default:
-    name: ponder-test
+    name: indexer-test

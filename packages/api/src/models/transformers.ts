@@ -1,5 +1,5 @@
 import {AuctionEventSchema, AuctionEventSchemaRaw} from "./auction-event.schema";
-import logger from "../logger";
+import {logger} from '../logger';
 
 /**
  * Convert snake_case keys to camelCase recursively
@@ -137,7 +137,7 @@ export function transformErrorResponse(error: {
  */
 export function transformWebSocketEvent(rawEvent: any, eventType: 'new_event' | 'updated_event' | 'deleted_event' = 'new_event') {
     const transformedEvent = transformEvent(rawEvent);
-    
+
     return {
         type: eventType,
         data: transformedEvent,

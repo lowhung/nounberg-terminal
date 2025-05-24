@@ -3,14 +3,14 @@ import {Hono} from 'hono';
 import {cors} from 'hono/cors';
 import {addEventEnrichmentJob, closeQueueResources} from './queue';
 import {EventData} from './types';
-import logger from './logger';
+import {logger} from './logger';
 
 const app = new Hono();
 
 app.use('*', cors());
 
 app.get('/health', (c) => {
-    return c.json({status: 'ok', service: 'queue-api'});
+    return c.json({status: 'ok', service: 'queue'});
 });
 
 app.post('/jobs/enrich-event', async (c) => {

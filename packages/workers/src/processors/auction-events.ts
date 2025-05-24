@@ -3,7 +3,7 @@ import {Job} from 'bullmq';
 import {createDbContext} from "../db";
 import {EventData} from "../types";
 import {getJobProcessingDependencies} from "../queue";
-import logger from "../logger";
+import {logger} from "../logger";
 import {CacheService} from "../cache";
 
 const dbContext = createDbContext();

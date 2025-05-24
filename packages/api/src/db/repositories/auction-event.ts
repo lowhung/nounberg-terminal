@@ -1,5 +1,5 @@
 import {Client, Pool, PoolClient} from 'pg';
-import logger from "../../logger";
+import {logger} from "../../logger";
 
 interface CursorPaginationOptions {
     limit?: number;

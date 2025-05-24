@@ -1,6 +1,6 @@
 import {createConfig} from "ponder";
 import {http} from "viem";
-import {NounsAuctionHouseAbi} from "./abis/NounsAuctionHouseAbi";
+import {NounsAuctionHouseAbi} from "../abis/NounsAuctionHouseAbi";
 
 export default createConfig({
     networks: {

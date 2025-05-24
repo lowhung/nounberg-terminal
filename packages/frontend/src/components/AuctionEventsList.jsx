@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useEffect} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {useAuctionEvents, useRealTimeEvents} from '../hooks/useAuctionEvents';
 import EventCard from "./EventCard";
 
@@ -38,8 +38,7 @@ export const AuctionEventsList = () => {
                     return prev;
                 }
 
-                const updated = [newEvent, ...prev].slice(0, 20);
-                return updated;
+                return [newEvent, ...prev].slice(0, 20);
             });
 
             setNewEventIds(prev => new Set([...prev, newEvent.id]));
@@ -58,7 +57,6 @@ export const AuctionEventsList = () => {
 
     const displayEvents = React.useMemo(() => {
         if (currentPage === 'initial' && liveEvents.length > 0) {
-            const fetchedEventIds = new Set(events.map(e => e.id));
             const uniqueFetchedEvents = events.filter(e => !liveEvents.some(le => le.id === e.id));
 
             const combined = [...liveEvents, ...uniqueFetchedEvents];
