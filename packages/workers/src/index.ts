@@ -2,7 +2,7 @@ import {Worker} from 'bullmq';
 import logger from './logger';
 import { createDbContext } from './db';
 import {closeQueueResources, createWorker} from "./queue";
-import {processEnrichEventJob} from "./processors/event-processor";
+import {processEnrichEventJob} from "./processors/auction-events";
 
 const dbContext = createDbContext();
 let workerInstance: Worker;

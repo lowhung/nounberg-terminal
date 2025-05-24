@@ -1,0 +1,6 @@
+{
+  "name": "foundry",
+  "dependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.7.3"
+  }
+}

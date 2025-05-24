@@ -1,9 +1,12 @@
 import {ponder} from "ponder:registry";
 import {formatEther} from "viem";
 import {auctionEvents} from "../ponder.schema";
-import logger from "./logger";
 import {EventData} from "./types";
 import {addEventEnrichmentJob} from "./client/workers";
+
+if (!process.env.QUEUE_API_URL) {
+    console.warn("QUEUE_API_URL is not set. No events will be queued.");
+}
 
 ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
     const {nounId, startTime, endTime} = event.args;
@@ -35,7 +38,7 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
             logIndex,
         }
     ).catch(err => {
-        logger.error(`Error inserting auction created event: ${err}`);
+        console.error(`Error inserting auction created event: ${err}`);
     });
 
     const eventData: EventData = {
@@ -53,7 +56,6 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
     };
 
     await addEventEnrichmentJob(eventData);
-    logger.debug(`Queued AuctionCreated for Noun #${nounId.toString()}`);
 });
 
 ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
@@ -107,7 +109,6 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
     };
 
     await addEventEnrichmentJob(eventData);
-    logger.debug(`Queued AuctionBid for Noun #${nounId.toString()} by ${displayBidder}`);
 });
 
 ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
@@ -158,5 +159,4 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
     };
 
     await addEventEnrichmentJob(eventData);
-    logger.debug(`Queued AuctionSettled for Noun #${nounId.toString()} to ${displayWinner}`);
 });
