@@ -24,7 +24,78 @@ function determineServiceName(): string {
     return 'app';
 }
 
-function createLogger() {
+function shouldUseSimpleLogging(): boolean {
+    // Use simple console logging in development or when not in Docker
+    return (
+        process.env.NODE_ENV === 'development' ||
+        process.env.NODE_ENV === 'dev' ||
+        !process.env.DOCKER_CONTAINER ||
+        process.env.SIMPLE_LOGGING === 'true'
+    );
+}
+
+function createSimpleLogger() {
+    const serviceName = determineServiceName();
+    const level = (process.env.LOG_LEVEL as LogLevel) || 'info';
+
+    const levelValues = {
+        trace: 10,
+        debug: 20,
+        info: 30,
+        warn: 40,
+        error: 50,
+        fatal: 60,
+        silent: Infinity
+    };
+
+    const currentLevelValue = levelValues[level] || 30;
+
+    const shouldLog = (logLevel: number) => logLevel >= currentLevelValue;
+
+    const formatMessage = (level: string, msgOrOptions: string | object, error?: Error) => {
+        const timestamp = new Date().toISOString();
+        const service = serviceName.padEnd(10, " ");
+
+        let message: string;
+        if (typeof msgOrOptions === 'string') {
+            message = msgOrOptions;
+        } else {
+            message = (msgOrOptions as any).msg || JSON.stringify(msgOrOptions);
+        }
+
+        let output = `${timestamp} ${level.toUpperCase().padEnd(5)} ${service} ${message}`;
+
+        if (error) {
+            output += `\n${error.stack || error.message}`;
+        }
+
+        return output;
+    };
+
+    return {
+        fatal: (msgOrOptions: string | object, error?: Error) => {
+            if (shouldLog(60)) console.error(formatMessage('fatal', msgOrOptions, error));
+        },
+        error: (msgOrOptions: string | object, error?: Error) => {
+            if (shouldLog(50)) console.error(formatMessage('error', msgOrOptions, error));
+        },
+        warn: (msgOrOptions: string | object, error?: Error) => {
+            if (shouldLog(40)) console.warn(formatMessage('warn', msgOrOptions, error));
+        },
+        info: (msgOrOptions: string | object, error?: Error) => {
+            if (shouldLog(30)) console.log(formatMessage('info', msgOrOptions, error));
+        },
+        debug: (msgOrOptions: string | object, error?: Error) => {
+            if (shouldLog(20)) console.log(formatMessage('debug', msgOrOptions, error));
+        },
+        trace: (msgOrOptions: string | object, error?: Error) => {
+            if (shouldLog(10)) console.log(formatMessage('trace', msgOrOptions, error));
+        },
+        flush: () => Promise.resolve(),
+    };
+}
+
+function createPinoLogger() {
     const level = (process.env.LOG_LEVEL as LogLevel) || 'info';
     const mode = (process.env.LOG_FORMAT as LogMode) === 'json' ? 'json' : 'pretty';
     const serviceName = determineServiceName();
@@ -130,4 +201,4 @@ const format = (log: Log) => {
     return prettyLog.join("\n");
 };
 
-export const logger = createLogger();
+export const logger = shouldUseSimpleLogging() ? createSimpleLogger() : createPinoLogger();

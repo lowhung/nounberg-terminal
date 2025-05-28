@@ -1,21 +1,21 @@
 import {Worker} from 'bullmq';
 import {QUEUE_NAMES} from './constants';
 import {createRedisConnection} from './index';
-import {createDbContext} from './db';
 import {logger} from './logger';
 import path from 'path';
 import {pathToFileURL} from 'url';
 import {closeCacheService} from "./cache";
+import {createDbContext} from "./db/context";
 
 let workerInstance: Worker | null = null;
 
 async function startWorker() {
     try {
         logger.info('Starting event enrichment worker...');
-        
+
         const dbContext = createDbContext();
         logger.info('Initialized database context');
-        
+
         const redisConnection = createRedisConnection();
         logger.info('Created Redis connection for worker');
 
@@ -43,11 +43,11 @@ async function startWorker() {
         workerInstance.on('error', (error) => {
             logger.error(`Worker error: ${error.message}`);
         });
-        
+
         workerInstance.on('ready', () => {
             logger.info('Worker is ready and waiting for jobs');
         });
-        
+
         workerInstance.on('stalled', (jobId) => {
             logger.warn(`Job ${jobId} stalled`);
         });
@@ -56,26 +56,26 @@ async function startWorker() {
 
         const shutdown = async () => {
             logger.info('Shutting down worker...');
-            
+
             if (workerInstance) {
                 await workerInstance.close();
                 logger.info('Worker closed');
             }
-            
+
             await dbContext.close();
             await closeCacheService();
             logger.info('Database connections closed');
-            
+
             process.exit(0);
         };
 
         process.on('SIGINT', shutdown);
         process.on('SIGTERM', shutdown);
-        
+
         process.on('warning', (warning) => {
             logger.warn(`Process warning: ${warning.message}`);
         });
-        
+
     } catch (error: any) {
         logger.error(`Error starting worker: ${error.message}`);
         process.exit(1);

@@ -8,11 +8,11 @@ export interface EventData {
     blockNumber: number;
     blockTimestamp: string;
     logIndex: number;
-    createdAt: number;
+    createdAt: string;
     thumbnailUrl?: string;
 
-    startTime?: number;
-    endTime?: number;
+    startTime?: string;
+    endTime?: string;
 
     bidder?: string;
     valueWei?: string;

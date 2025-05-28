@@ -1,36 +1,26 @@
-import {Client, Pool, PoolClient} from 'pg';
 import {logger} from "../logger";
+import {DbContext} from "./context";
 
 export class AuctionEvent {
-    private poolOrClient: Pool | Client | PoolClient;
-    private schema: string;
+    private dbContext: DbContext;
+    private readonly schema: string;
 
-    constructor(poolOrClient: Pool | Client | PoolClient, schema = 'public') {
-        this.poolOrClient = poolOrClient;
+    constructor(dbContext: DbContext, schema = 'public') {
+        this.dbContext = dbContext;
         this.schema = schema;
     }
 
-    async updateEnrichedEvent(eventId: string, enrichedData: {
+    private async updateEnrichedEvent(eventId: string, enrichedData: {
         bidderEns?: string | null;
         valueUsd?: number | null;
         winnerEns?: string | null;
         amountUsd?: number | null;
         headline?: string;
-    }) {
-        // TODO: CLEANUP: This method is a temporary solution to update enriched event data.
-        let client: PoolClient | null = null;
-        const isPool = 'connect' in this.poolOrClient;
+    }): Promise<{ rowsAffected: number }> {
+        let rowsAffected = 0;
 
-        try {
-            if (isPool) {
-                client = await (this.poolOrClient as Pool).connect();
-            } else {
-                client = this.poolOrClient as PoolClient;
-            }
-
-            await client.query('BEGIN');
-
-            await client.query(`
+        await this.dbContext.withTransaction(async (client) => {
+            const result = await client.query(`
                 UPDATE ${this.schema}.auction_events
                 SET bidder_ens   = $1,
                     value_usd    = $2,
@@ -49,21 +39,49 @@ export class AuctionEvent {
                 eventId
             ]);
 
-            await client.query(`NOTIFY event_updated, '${eventId}'`);
-            await client.query('COMMIT');
+            rowsAffected = result.rowCount || 0;
 
-            logger.debug(`Successfully updated enriched event ${eventId}`);
+            if (rowsAffected > 0) {
+                await client.query(`NOTIFY event_updated, '${eventId}'`);
+            }
+        });
+
+        return { rowsAffected };
+    }
+    /*
+    * Update an enriched event with retry logic
+     */
+    async updateEnrichedEventRetry(eventId: string, enrichedData: {
+        bidderEns?: string | null;
+        valueUsd?: number | null;
+        winnerEns?: string | null;
+        amountUsd?: number | null;
+        headline?: string;
+    }): Promise<{ rowsAffected: number }> {
+        try {
+            let result = await this.updateEnrichedEvent(eventId, enrichedData);
+
+            if (result.rowsAffected > 0) {
+                logger.debug(`Successfully updated enriched event ${eventId} (${result.rowsAffected} rows affected)`);
+                return result;
+            }
+
+            logger.debug(`Event ${eventId} not found on first attempt, retrying once after brief delay`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            result = await this.updateEnrichedEvent(eventId, enrichedData);
+
+            if (result.rowsAffected === 0) {
+                logger.warn(`Event ${eventId} not found for enrichment after retry`);
+            } else {
+                logger.debug(`Successfully updated enriched event ${eventId} on retry (${result.rowsAffected} rows affected)`);
+            }
+
+            return result;
 
         } catch (error) {
-            if (client) {
-                await client.query('ROLLBACK');
-            }
             logger.error({msg: `Error processing enriched event ${eventId}`, error});
             throw error;
-        } finally {
-            if (isPool && client) {
-                (client as PoolClient).release();
-            }
         }
     }
 }

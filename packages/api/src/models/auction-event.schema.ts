@@ -11,19 +11,18 @@ export const AuctionEventSchema = z.object({
     headline: z.string(),
     thumbnailUrl: z.string().optional().nullable(),
     createdAt: z.bigint().transform((val) => String(val)),
-    processedAt: z.number().optional().nullable(),
-    
-    // Auction creation fields
-    startTime: z.number().optional().nullable(),
-    endTime: z.number().optional().nullable(),
-    
+
+    processedAt: z.bigint().transform((val) => String(val)).optional().nullable(),
+    startTime: z.bigint().transform((val) => String(val)).optional().nullable(),
+    endTime: z.bigint().transform((val) => String(val)).optional().nullable(),
+
     // Bid fields
     bidder: z.string().optional().nullable(),
     bidderEns: z.string().optional().nullable(),
     valueWei: z.string().optional().nullable(),
     valueUsd: z.string().optional().nullable(),
     extended: z.boolean().optional().nullable(),
-    
+
     // Settlement fields
     winner: z.string().optional().nullable(),
     winnerEns: z.string().optional().nullable(),

@@ -131,7 +131,7 @@ services:
       ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
       REDIS_URL: redis://redis:6379
     deploy:
-      replicas: 1  # Reduce to 1 worker replica to limit DB connections
+      replicas: 1
       resources:
         limits:
           cpus: '0.5'

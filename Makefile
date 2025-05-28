@@ -37,7 +37,7 @@ dev-frontend: dev ## Start infrastructure + frontend service
 	@docker compose up -d frontend
 	@echo "$(GREEN)✅ Frontend ready$(RESET)"
 
-prod: ## Build and start full production stack
+start: ## Build and start full production stack
 	@echo "$(BLUE)Starting production stack...$(RESET)"
 	@docker compose up --build
 	@echo "$(GREEN)✅ Production ready$(RESET)"

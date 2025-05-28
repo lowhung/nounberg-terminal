@@ -1,4 +1,4 @@
-import {bigint, boolean, integer, numeric, pgTable, text} from "drizzle-orm/pg-core";
+import {bigint, boolean, index, integer, numeric, pgTable, text} from "drizzle-orm/pg-core";
 
 export const auctionEvents = pgTable("auction_events", {
     id: text("id").primaryKey(),
@@ -10,23 +10,33 @@ export const auctionEvents = pgTable("auction_events", {
     blockTimestamp: bigint("block_timestamp", {mode: "bigint"}).notNull(),
     logIndex: integer("log_index").notNull(),
 
-    startTime: integer("start_time"),
-    endTime: integer("end_time"),
+    startTime: bigint("start_time", {mode: "bigint"}),
+    endTime: bigint("end_time", {mode: "bigint"}),
 
     bidder: text("bidder"),
     bidderEns: text("bidder_ens"),
-    valueWei: numeric("value_wei"),
+    valueWei: text("value_wei"),
     valueUsd: numeric("value_usd", {precision: 12, scale: 2}),
     extended: boolean("extended"),
 
     winner: text("winner"),
     winnerEns: text("winner_ens"),
-    amountWei: numeric("amount_wei"),
+    amountWei: text("amount_wei"),
     amountUsd: numeric("amount_usd", {precision: 12, scale: 2}),
 
     headline: text("headline").notNull(),
     thumbnailUrl: text("thumbnail_url"),
 
     createdAt: bigint("created_at", {mode: "bigint"}).notNull(),
-    processedAt: integer("processed_at"),
-});
+    processedAt: bigint("processed_at", {mode: "bigint"}),
+}, (table) => [
+    index("block_timestamp_idx").on(table.blockTimestamp),
+
+    index("type_idx").on(table.type),
+    index("noun_id_idx").on(table.nounId),
+
+    index("type_block_timestamp_idx").on(table.type, table.blockTimestamp),
+    index("noun_id_block_timestamp_idx").on(table.nounId, table.blockTimestamp),
+
+    index("type_noun_id_block_timestamp_idx").on(table.type, table.nounId, table.blockTimestamp),
+]);
