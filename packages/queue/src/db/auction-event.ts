@@ -1,5 +1,5 @@
 import {Client, Pool, PoolClient} from 'pg';
-import {logger} from "../../logger";
+import {logger} from "../logger";
 
 export class AuctionEvent {
     private poolOrClient: Pool | Client | PoolClient;
@@ -17,16 +17,17 @@ export class AuctionEvent {
         amountUsd?: number | null;
         headline?: string;
     }) {
+        // TODO: CLEANUP: This method is a temporary solution to update enriched event data.
         let client: PoolClient | null = null;
         const isPool = 'connect' in this.poolOrClient;
-        
+
         try {
             if (isPool) {
                 client = await (this.poolOrClient as Pool).connect();
             } else {
                 client = this.poolOrClient as PoolClient;
             }
-            
+
             await client.query('BEGIN');
 
             await client.query(`
@@ -52,12 +53,12 @@ export class AuctionEvent {
             await client.query('COMMIT');
 
             logger.debug(`Successfully updated enriched event ${eventId}`);
-            
+
         } catch (error) {
             if (client) {
                 await client.query('ROLLBACK');
             }
-            logger.error({ msg: `Error processing enriched event ${eventId}`, error });
+            logger.error({msg: `Error processing enriched event ${eventId}`, error});
             throw error;
         } finally {
             if (isPool && client) {

@@ -29,14 +29,12 @@ export function transformCursorPaginatedResponse(response: {
     data: any[];
     pagination: {
         nextCursor: bigint | null;
-        previousCursor: bigint | null;
     };
 }) {
     return {
         data: transformEvents(response.data),
         pagination: {
             nextCursor: response.pagination.nextCursor ? response.pagination.nextCursor.toString() : null,
-            previousCursor: response.pagination.previousCursor ? response.pagination.previousCursor.toString() : null
         },
         meta: {
             paginationType: 'cursor',

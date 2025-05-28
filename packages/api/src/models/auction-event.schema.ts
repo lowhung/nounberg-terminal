@@ -20,15 +20,15 @@ export const AuctionEventSchema = z.object({
     // Bid fields
     bidder: z.string().optional().nullable(),
     bidderEns: z.string().optional().nullable(),
-    value: z.string().optional().nullable(), // Wei as string
-    valueUsd: z.string().optional().nullable(), // USD as string
+    valueWei: z.string().optional().nullable(),
+    valueUsd: z.string().optional().nullable(),
     extended: z.boolean().optional().nullable(),
     
     // Settlement fields
     winner: z.string().optional().nullable(),
     winnerEns: z.string().optional().nullable(),
-    amount: z.string().optional().nullable(), // Wei as string
-    amountUsd: z.string().optional().nullable(), // USD as string
+    amountWei: z.string().optional().nullable(),
+    amountUsd: z.string().optional().nullable(),
 });
 
 export const EventsQuerySchema = z.object({

@@ -31,17 +31,11 @@ export const useAuctionEvents = (options = {}) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [nextCursor, setNextCursor] = useState(null);
-    const [previousCursor, setPreviousCursor] = useState(null);
-    const [hasMore, setHasMore] = useState(false);
-    const [totalCount, setTotalCount] = useState(undefined);
 
     const abortControllerRef = useRef(null);
     const refreshIntervalRef = useRef(null);
 
-    const fetchEvents = useCallback(async (
-        cursor,
-        direction = 'forward'
-    ) => {
+    const fetchEvents = useCallback(async (cursor) => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
@@ -55,15 +49,11 @@ export const useAuctionEvents = (options = {}) => {
                 limit,
                 cursor,
                 type,
-                nounId: debouncedNounId,
-                direction
+                nounId: debouncedNounId
             });
 
             setEvents(response.events);
             setNextCursor(response.pagination.nextCursor);
-            setPreviousCursor(response.pagination.previousCursor);
-            setHasMore(response.pagination.hasMore);
-            setTotalCount(response.pagination.totalCount);
 
         } catch (err) {
             if (err.name === 'AbortError') {
@@ -71,7 +61,6 @@ export const useAuctionEvents = (options = {}) => {
             }
 
             setError(err.message || 'An error occurred while fetching events');
-            console.error('Error fetching auction events:', err);
         } finally {
             setLoading(false);
         }
@@ -82,18 +71,18 @@ export const useAuctionEvents = (options = {}) => {
     }, [fetchEvents]);
 
     const loadMore = useCallback(async () => {
-        if (!hasMore || loading || !nextCursor) return;
-        await fetchEvents(nextCursor, 'forward');
-    }, [fetchEvents, hasMore, loading, nextCursor]);
+        if (loading || !nextCursor) return;
+        await fetchEvents(nextCursor);
+    }, [fetchEvents, loading, nextCursor]);
 
-    const loadPrevious = useCallback(async () => {
-        if (loading || !previousCursor) return;
-        await fetchEvents(previousCursor, 'backward');
-    }, [fetchEvents, loading, previousCursor]);
+    const backToLive = useCallback(async () => {
+        await refresh();
+    }, [refresh]);
 
     const retry = useCallback(async () => {
         await refresh();
     }, [refresh]);
+    const hasMore = Boolean(nextCursor);
 
     useEffect(() => {
         if (autoRefresh && refreshInterval > 0) {
@@ -123,15 +112,15 @@ export const useAuctionEvents = (options = {}) => {
             }
         };
     }, [refresh]);
+    
     return {
         events,
         loading,
         error,
         hasMore,
-        totalCount,
         loadMore,
         refresh,
-        loadPrevious,
+        backToLive,
         retry
     };
 };
@@ -147,7 +136,6 @@ export const useRealTimeEvents = (onNewEvent) => {
 
                 wsRef.current.onopen = () => {
                     setConnected(true);
-                    console.log('WebSocket connected');
                 };
 
                 wsRef.current.onmessage = (event) => {
@@ -163,16 +151,13 @@ export const useRealTimeEvents = (onNewEvent) => {
 
                 wsRef.current.onclose = () => {
                     setConnected(false);
-                    console.log('WebSocket disconnected');
 
                     setTimeout(connect, 5000);
                 };
 
                 wsRef.current.onerror = (error) => {
-                    console.error('WebSocket error:', error);
                 };
             } catch (error) {
-                console.error('Error creating WebSocket connection:', error);
                 setConnected(false);
 
                 setTimeout(connect, 5000);

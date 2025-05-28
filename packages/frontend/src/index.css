@@ -3,53 +3,53 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-noun-bg text-noun-text font-sans antialiased;
-    line-height: 1.6;
-  }
+    body {
+        @apply bg-noun-bg text-noun-text font-sans antialiased;
+        line-height: 1.6;
+    }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply leading-tight;
-    margin-top: 0;
-  }
+    h1, h2, h3, h4, h5, h6 {
+        @apply leading-tight;
+        margin-top: 0;
+    }
 
-  code {
-    @apply font-mono;
-  }
+    code {
+        @apply font-mono;
+    }
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-noun-accent hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
-  }
+    .btn-primary {
+        @apply bg-noun-accent hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    }
 
-  .btn-secondary {
-    @apply bg-noun-border hover:bg-gray-600 text-noun-text font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
-  }
+    .btn-secondary {
+        @apply bg-noun-border hover:bg-gray-600 text-noun-text font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    }
 
-  .card {
-    @apply bg-gradient-to-br from-noun-bg to-noun-card border border-noun-border rounded-xl p-6 transition-all duration-300;
-  }
+    .card {
+        @apply bg-gradient-to-br from-noun-bg to-noun-card border border-noun-border rounded-xl p-6 transition-all duration-300;
+    }
 
-  .card:hover {
-    @apply border-gray-500 shadow-2xl transform -translate-y-1;
-  }
+    .card:hover {
+        @apply border-gray-500 shadow-2xl transform -translate-y-1;
+    }
 
-  .text-muted {
-    @apply text-noun-text-muted;
-  }
+    .text-muted {
+        @apply text-noun-text-muted;
+    }
 
-  .text-dim {
-    @apply text-noun-text-dim;
-  }
+    .text-dim {
+        @apply text-noun-text-dim;
+    }
 }
 
 @layer utilities {
-  .animate-pulse-border {
-    animation: pulse-border 2s ease-in-out;
-  }
+    .animate-pulse-border {
+        animation: pulse-border 2s ease-in-out;
+    }
 
-  .animate-slide-in {
-    animation: slide-in 0.3s ease-out;
-  }
+    .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+    }
 }

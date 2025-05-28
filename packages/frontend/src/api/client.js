@@ -9,7 +9,6 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
     (config) => {
-        console.debug(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
         return config;
     },
     (error) => {
@@ -20,7 +19,6 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
     (response) => {
-        console.debug(`API Response: ${response.status} ${response.config.url}`);
         return response;
     },
     (error) => {

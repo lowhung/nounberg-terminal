@@ -11,23 +11,21 @@ import apiClient from './client';
  * @param {string} options.cursor - Cursor for pagination
  * @param {string} options.type - Event type filter (created, bid, settled)
  * @param {number} options.nounId - Filter by specific Noun ID
- * @param {string} options.direction - Pagination direction (forward, backward)
  * @returns {Promise<Object>} - Response with events and cursor pagination info
  */
 export async function fetchEventsCursor(options = {}) {
-    const {limit = 20, cursor, type, nounId, direction = 'forward'} = options;
+    const {limit = 20, cursor, type, nounId} = options;
 
     try {
         const params = {limit};
         if (cursor) params.cursor = cursor;
         if (type) params.type = type;
         if (nounId) params.nounId = nounId;
-        if (direction !== 'forward') params.direction = direction;
 
         const response = await apiClient.get('/api/events', {params});
 
         return {
-            events: response.data.data || [],
+            events: response.data.data || [], // API returns 'data', we rename to 'events' for compatibility
             pagination: response.data.pagination || {},
             meta: response.data.meta || {}
         };

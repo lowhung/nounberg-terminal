@@ -36,18 +36,6 @@ services:
     volumes:
       - redis-data:/data
 
-#  memcached:
-#    image: memcached:1.6-alpine
-#    restart: always
-#    ports:
-#      - "11211:11211"
-#    command: memcached -m 128
-#    healthcheck:
-#      test: [ "CMD", "nc", "-z", "localhost", "11211" ]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 3
-
   indexer:
     build:
       context: ./packages/indexer

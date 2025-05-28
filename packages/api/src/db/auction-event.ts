@@ -1,4 +1,4 @@
-import {desc, lt, eq, and, gt, sql} from 'drizzle-orm';
+import {and, desc, eq, lt} from 'drizzle-orm';
 import {auctionEvents} from "./schema";
 import {db} from "./index";
 import {logger} from "../logger";
@@ -7,19 +7,19 @@ interface PaginationResult<T> {
     data: T[];
     pagination: {
         nextCursor: bigint | null;
-        previousCursor: bigint | null;
     };
 }
 
 /**
  * Get auction events with cursor-based pagination
- * 
+ *
  * Pagination logic:
  * - No cursor: Returns the newest events (DESC order)
  * - With cursor: Returns events older than the cursor timestamp
- * - To go "back" to newer events: Use a cursor from earlier in your pagination history
- * 
+ * - To go back to newer events: Use "Back to Live" to refresh without cursor
+ *
  * The cursor is always the blockTimestamp, and pagination flows from newest to oldest.
+ * This is simple, reliable unidirectional cursor pagination.
  */
 export async function getEvents(options: {
     limit?: number;
@@ -34,7 +34,7 @@ export async function getEvents(options: {
         const conditions = [];
         if (type) conditions.push(eq(auctionEvents.type, type));
         if (nounId) conditions.push(eq(auctionEvents.nounId, nounId));
-        
+
         if (cursor) {
             conditions.push(lt(auctionEvents.blockTimestamp, cursor));
         }
@@ -52,40 +52,18 @@ export async function getEvents(options: {
 
         const hasMore = results.length > validLimit;
         const data = hasMore ? results.slice(0, validLimit) : results;
-
-        const baseConditions = [];
-        if (type) baseConditions.push(eq(auctionEvents.type, type));
-        if (nounId) baseConditions.push(eq(auctionEvents.nounId, nounId));
-        const hasPrevious = cursor ? await checkHasNewer(cursor, baseConditions) : false;
-
-        const startCursor = data.length > 0 ? data[0].blockTimestamp : null;
         const endCursor = data.length > 0 ? data[data.length - 1].blockTimestamp : null;
 
         return {
             data,
             pagination: {
-                nextCursor: hasMore ? endCursor : null,
-                previousCursor: hasPrevious ? startCursor : null
+                nextCursor: hasMore ? endCursor : null
             }
         };
     } catch (error) {
         logger.error('Error in cursor pagination:', error);
         throw new Error(`Database error in cursor pagination: ${(error as Error).message}`);
     }
-}
-
-async function checkHasNewer(cursor: bigint, baseConditions: any[]): Promise<boolean> {
-    const conditions = [...baseConditions, gt(auctionEvents.blockTimestamp, cursor)];
-    
-    const whereCondition = conditions.length === 1 ? conditions[0] : and(...conditions);
-    
-    const result = await db
-        .select({ count: sql`select count(*)` })
-        .from(auctionEvents)
-        .where(whereCondition)
-        .limit(1);
-    
-    return Number(result[0]?.count) > 0;
 }
 
 export async function getEventById(id: string) {

@@ -15,13 +15,13 @@ export const auctionEvents = pgTable("auction_events", {
 
     bidder: text("bidder"),
     bidderEns: text("bidder_ens"),
-    valueGwei: numeric("value_gwei"),
+    valueWei: numeric("value_wei"),
     valueUsd: numeric("value_usd", {precision: 12, scale: 2}),
     extended: boolean("extended"),
 
     winner: text("winner"),
     winnerEns: text("winner_ens"),
-    amountGwei: numeric("amount_gwei"),
+    amountWei: numeric("amount_wei"),
     amountUsd: numeric("amount_usd", {precision: 12, scale: 2}),
 
     headline: text("headline").notNull(),

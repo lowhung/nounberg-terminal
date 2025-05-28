@@ -5,10 +5,10 @@ import AuctionEventsList from './components/AuctionEventsList';
 function App() {
     return (
         <div className="min-h-screen bg-noun-bg">
-            <Header />
+            <Header/>
 
             <main>
-                <AuctionEventsList />
+                <AuctionEventsList/>
             </main>
 
             <footer className="bg-noun-card border-t border-noun-border mt-16">

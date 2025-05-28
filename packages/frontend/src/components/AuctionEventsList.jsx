@@ -10,22 +10,21 @@ export const AuctionEventsList = () => {
     const [currentPage, setCurrentPage] = useState('initial');
     const [liveEvents, setLiveEvents] = useState([]);
     const [newEventIds, setNewEventIds] = useState(new Set());
-    const [liveEventCount, setLiveEventCount] = useState(0);
     const {
         events,
         loading,
         error,
         hasMore,
-        totalCount,
         loadMore,
         refresh,
-        loadPrevious,
+        backToLive,
         retry
     } = useAuctionEvents({
         limit: 20,
         type: filter.type || undefined,
         nounId: filter.nounId ? parseInt(filter.nounId) : undefined,
-        autoRefresh: false, refreshInterval: 30000
+        autoRefresh: false, 
+        refreshInterval: 30000
     });
 
     const handleNewEvent = useCallback((newEvent) => {
@@ -74,7 +73,6 @@ export const AuctionEventsList = () => {
         setCurrentPage('initial');
         setLiveEvents([]);
         setNewEventIds(new Set());
-        setLiveEventCount(0);
     };
 
     const clearFilters = () => {
@@ -82,25 +80,13 @@ export const AuctionEventsList = () => {
         setCurrentPage('initial');
         setLiveEvents([]);
         setNewEventIds(new Set());
-        setLiveEventCount(0);
     };
 
-    const getDisplayCount = () => {
-        if (!totalCount) return null;
-
-        if (currentPage === 'initial' && liveEventCount > 0) {
-            return {
-                total: `${(totalCount + liveEventCount).toLocaleString()}+`,
-                subtitle: `${totalCount.toLocaleString()} stored + ${liveEventCount} new`,
-                isLive: true
-            };
+    const getDisplayText = () => {
+        if (currentPage === 'initial' && liveEvents.length > 0) {
+            return `Showing live events + recent history`;
         }
-
-        return {
-            total: totalCount.toLocaleString(),
-            subtitle: 'total events',
-            isLive: false
-        };
+        return `Recent auction events`;
     };
 
     const handleLoadMore = useCallback(async () => {
@@ -108,10 +94,10 @@ export const AuctionEventsList = () => {
         setCurrentPage('navigated');
     }, [loadMore]);
 
-    const handleLoadPrevious = useCallback(async () => {
-        await loadPrevious();
-        setCurrentPage('navigated');
-    }, [loadPrevious]);
+    const handleBackToLive = useCallback(async () => {
+        await backToLive();
+        setCurrentPage('initial');
+    }, [backToLive]);
 
     const handleRefresh = useCallback(async () => {
         await refresh();
@@ -179,24 +165,14 @@ export const AuctionEventsList = () => {
                             <h2 className="text-3xl font-bold text-noun-text mb-2">
                                 {currentPage === 'initial' ? 'Live Auction Events' : 'Historical Auction Events'}
                             </h2>
-                            {(() => {
-                                const countInfo = getDisplayCount();
-                                if (!countInfo) return null;
-
-                                return (
-                                    <div className="text-noun-text-muted">
-                                        <p>
-                                            Total: <span
-                                            className="text-noun-accent font-semibold">{countInfo.total}</span> events
-                                        </p>
-                                        {countInfo.isLive && (
-                                            <p className="text-xs text-noun-text-dim">
-                                                ({countInfo.subtitle})
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })()}
+                            <div className="text-noun-text-muted">
+                                <p>{getDisplayText()}</p>
+                                {currentPage === 'initial' && liveEvents.length > 0 && (
+                                    <p className="text-xs text-noun-accent mt-1">
+                                        {liveEvents.length} live events visible
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         {currentPage === 'navigated' && (
@@ -305,29 +281,23 @@ export const AuctionEventsList = () => {
                     <div className="text-noun-text-muted">
                         <span>Showing {displayEvents.length} events</span>
                         {currentPage === 'initial' && liveEvents.length > 0 && (
-                            <span className="text-noun-accent"> ({liveEvents.length} visible live)</span>
+                            <span className="text-noun-accent"> ({liveEvents.length} live)</span>
                         )}
-                        {(() => {
-                            const countInfo = getDisplayCount();
-                            return countInfo ? (
-                                <span> of {countInfo.total} total</span>
-                            ) : null;
-                        })()}
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Only show "Newer" if we've navigated away from the initial page */}
+                        {/* Show "Back to Live" button when paginated away */}
                         {currentPage === 'navigated' && (
                             <button
-                                onClick={handleLoadPrevious}
+                                onClick={handleBackToLive}
                                 disabled={loading}
                                 className="flex items-center gap-2 px-4 py-2 bg-noun-border hover:bg-gray-600 disabled:bg-noun-border disabled:text-noun-text-muted text-noun-text font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
                             >
-                                ← Newer
+                                ← Back to Live
                             </button>
                         )}
 
-                        {/* Only show "Older" if there are more events to load */}
+                        {/* Only show "Load More" if there are more events to load */}
                         {hasMore && (
                             <button
                                 onClick={handleLoadMore}
@@ -340,7 +310,7 @@ export const AuctionEventsList = () => {
                                         Loading...
                                     </>
                                 ) : (
-                                    'Older →'
+                                    'Load More →'
                                 )}
                             </button>
                         )}

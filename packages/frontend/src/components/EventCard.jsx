@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, {useEffect, useState} from 'react';
+import {formatDate, formatFullDisplay, shortenAddress} from '../utils';
 
 export default function EventCard({ event, isNew = false }) {
     const [highlight, setHighlight] = useState(isNew);
@@ -10,26 +11,6 @@ export default function EventCard({ event, isNew = false }) {
             return () => clearTimeout(timer);
         }
     }, [isNew]);
-
-    const formatDate = (timestamp) => {
-        if (!timestamp) return 'N/A';
-        const date = timestamp > 1000000000000
-            ? new Date(timestamp) // already in milliseconds
-            : new Date(timestamp * 1000); // convert seconds to milliseconds
-
-        return date.toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-    };
-
-    const shortenAddress = (address) => {
-        if (!address) return 'N/A';
-        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
-    };
 
     const getEventTypeColor = (type) => {
         switch (type) {
@@ -45,11 +26,11 @@ export default function EventCard({ event, isNew = false }) {
             case 'bid':
                 return (
                     <>
-                        {event.value && (
+                        {event.valueWei && (
                             <div className="flex gap-2 items-center">
                                 <span className="text-noun-text-muted font-medium">Price:</span>
                                 <span className="text-noun-accent font-bold">
-                                    {event.valueFullDisplay || event.valueDisplay}
+                                    {formatFullDisplay(event.valueWei, event.valueUsd)}
                                 </span>
                             </div>
                         )}
@@ -80,11 +61,11 @@ export default function EventCard({ event, isNew = false }) {
             case 'settled':
                 return (
                     <>
-                        {event.amount && (
+                        {event.amountWei && (
                             <div className="flex gap-2 items-center">
                                 <span className="text-noun-text-muted font-medium">Final Price:</span>
                                 <span className="text-noun-accent font-bold">
-                                    {event.amountFullDisplay || event.amountDisplay}
+                                    {formatFullDisplay(event.amountWei, event.amountUsd)}
                                 </span>
                             </div>
                         )}
