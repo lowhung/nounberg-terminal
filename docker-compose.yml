@@ -129,7 +129,6 @@ services:
       SERVICE_NAME: worker
       ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
       ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
-      CACHE_URL: memcached:11211
       REDIS_URL: redis://redis:6379
     deploy:
       replicas: 1  # Reduce to 1 worker replica to limit DB connections

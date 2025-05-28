@@ -31,7 +31,7 @@ function sendMessage(ws: any, message: WSResponse) {
         }
         return false;
     } catch (error) {
-        logger.error('Failed to send WebSocket message:', error);
+        logger.error({msg: 'Failed to send WebSocket message', error});
         return false;
     }
 }
@@ -41,13 +41,13 @@ function parseMessage(event: Event): WSMessage | null {
         let raw: string;
         if (Buffer.isBuffer(event)) {
             raw = event.toString();
-        } else if (typeof event === 'string') {
-            raw = event;
-        } else if (typeof event === 'object' && event !== null) {
-            raw = JSON.stringify(event);
         } else {
-            logger.warn(`Received unexpected message type: ${event?.type}`);
-            return null;
+            if (typeof event === 'object' && event !== null) {
+                raw = JSON.stringify(event);
+            } else {
+                logger.warn({msg: 'Unexpected WebSocket message type', type: typeof event});
+                return null;
+            }
         }
 
         if (!raw || raw.trim() === '' || raw === '{}') {
@@ -64,7 +64,7 @@ function parseMessage(event: Event): WSMessage | null {
 
         return parsed;
     } catch (error) {
-        logger.error(`Failed to parse WebSocket message:`, error);
+        logger.error({msg: 'Failed to parse message', error});
         return null;
     }
 }
@@ -98,7 +98,7 @@ export function setupWebSockets(app: Hono) {
         },
 
         onMessage(event, ws) {
-            const message: WSMessage = parseMessage(event);
+            const message = parseMessage(event);
             if (!message) return;
 
             logger.debug(`Received WebSocket message: ${JSON.stringify(message)}`);
@@ -173,7 +173,7 @@ export async function startNotificationListener() {
             broadcastEvent(transformedEvent);
 
         } catch (error) {
-            logger.error('Error handling notification:', error);
+            logger.error({msg: 'Error handling PostgreSQL notification', error});
         }
     });
 
@@ -227,7 +227,7 @@ export function broadcastMessage(message: WSResponse) {
         logger.debug(`Cleaned up ${removed} dead connections`);
     }
 
-    if (message.type !== 'ping') { // Don't log ping messages
+    if (message.type !== 'ping') {
         logger.debug(`Broadcast ${message.type} to ${sent} clients`);
     }
 

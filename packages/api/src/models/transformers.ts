@@ -11,7 +11,7 @@ export function transformEvent(rawEvent: any) {
     try {
         return AuctionEventSchema.parse(rawEvent);
     } catch (error) {
-        logger.error(`Error transforming event: ${error.toString()}, Raw Event: ${JSON.stringify(rawEvent)}`);
+        logger.error({ msg: 'Error transforming event', error, rawEvent });
     }
 }
 

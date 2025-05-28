@@ -61,7 +61,7 @@ export async function getEvents(options: {
             }
         };
     } catch (error) {
-        logger.error('Error in cursor pagination:', error);
+        logger.error({msg: 'Error fetching auction events', error, options});
         throw new Error(`Database error in cursor pagination: ${(error as Error).message}`);
     }
 }
@@ -75,8 +75,8 @@ export async function getEventById(id: string) {
             .limit(1);
 
         return results.length > 0 ? results[0] : null;
-    } catch (error) {
-        logger.error(`Error fetching auction event ${id}:`, error);
+    } catch (error: unknown) {
+        logger.error({ msg: 'Error fetching event by ID', id, error });
         throw new Error(`Database error when fetching event: ${(error as Error).message}`);
     }
 }

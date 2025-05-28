@@ -76,7 +76,7 @@ async function startWorker() {
             logger.warn(`Process warning: ${warning.message}`);
         });
         
-    } catch (error) {
+    } catch (error: any) {
         logger.error(`Error starting worker: ${error.message}`);
         process.exit(1);
     }

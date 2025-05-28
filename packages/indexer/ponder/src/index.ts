@@ -2,7 +2,7 @@ import {ponder} from "ponder:registry";
 import {formatEther} from "viem";
 import {auctionEvents} from "../ponder.schema";
 import {EventData} from "./types";
-import {addEventEnrichmentJob} from "./client/workers";
+import {addEventEnrichmentJob} from "./client/queue";
 
 if (!process.env.QUEUE_API_URL) {
     console.warn("QUEUE_API_URL is not set. No events will be queued.");

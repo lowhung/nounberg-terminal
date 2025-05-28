@@ -11,7 +11,7 @@ docsRouter.get('/openapi.json', (c) => {
         const openApiContent = readFileSync(openApiPath, 'utf-8');
         return c.json(JSON.parse(openApiContent));
     } catch (error) {
-        logger.error('Error serving OpenAPI spec:', error);
+        logger.error({ msg: 'Error serving OpenAPI spec', error });
         return c.json({error: 'Failed to load API specification'}, 500);
     }
 });
@@ -22,7 +22,7 @@ docsRouter.get('/', async (c) => {
         const content = readFileSync(htmlPath, 'utf-8');
         return c.html(content);
     } catch (error) {
-        logger.error('Error serving docs HTML:', error);
+        logger.error({ msg: 'Error serving docs html', error });
         return c.text('Documentation unavailable', 500);
     }
 });
@@ -33,7 +33,7 @@ docsRouter.get('/websocket', async (c) => {
         const content = readFileSync(htmlPath, 'utf-8');
         return c.html(content);
     } catch (error) {
-        logger.error('Error serving WebSocket docs HTML:', error);
+        logger.error({ msg: 'Error serving websocket docs HTML', error });
         return c.text('WebSocket documentation unavailable', 500);
     }
 });

@@ -3,12 +3,12 @@ import {Hono} from 'hono';
 import {cors} from 'hono/cors';
 import docsRouter from './docs/router';
 import {broadcastMessage, setupWebSockets, startNotificationListener} from './websocket';
-import {logger} from "./logger";
-import {getEvents} from "./db/auction-event";
-import {db} from "./db";
-import {auctionEvents} from "./db/schema";
-import {EventsQuerySchema} from "./models/auction-event.schema";
-import {transformCursorPaginatedResponse} from "./models/transformers";
+import {logger} from './logger';
+import {getEvents} from './db/auction-event';
+import {db} from './db';
+import {auctionEvents} from './db/schema';
+import {EventsQuerySchema} from './models/auction-event.schema';
+import {transformCursorPaginatedResponse} from './models/transformers';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -77,7 +77,7 @@ app.get('/api/health', async (c) => {
             await db.select().from(auctionEvents).limit(1);
             dbHealthy = true;
         } catch (error) {
-            logger.error('Database health check failed:', error);
+            logger.error({msg: 'Database connection check failed', error});
         }
 
         return c.json({
@@ -95,7 +95,7 @@ app.get('/api/health', async (c) => {
             }
         });
     } catch (error) {
-        logger.error('Health check failed:', error);
+        logger.error({msg: 'Health check failed', error});
         return c.json({
             status: 'error',
             message: 'Health check failed',
@@ -135,7 +135,7 @@ async function start() {
                 await notificationClient.end();
                 process.exit(0);
             } catch (error) {
-                logger.error('Error during shutdown:', error);
+                logger.error({msg: 'Error during shutdown', error});
                 process.exit(1);
             }
         };
@@ -145,7 +145,7 @@ async function start() {
 
         return {server};
     } catch (error) {
-        logger.error('Failed to start server:', error);
+        logger.error({msg: 'Error starting server', error});
         throw error;
     }
 }
