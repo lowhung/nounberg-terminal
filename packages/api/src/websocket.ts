@@ -1,19 +1,20 @@
-import { Hono } from 'hono';
-import { createNodeWebSocket } from '@hono/node-ws';
+import {Hono} from 'hono';
+import {createNodeWebSocket} from '@hono/node-ws';
 import WebSocket from 'ws';
-import { createDbClient, type DbContext } from './db';
-import { transformEvent } from './models/transformers';
+import {transformEvent} from './models/transformers';
 import {logger} from './logger';
+import {getEventById} from "./db/auction-event";
+import {Client} from "pg";
 
 const subscribedClients = new Set<WebSocket>();
 
 type WSMessage =
     | { type: 'subscribe' }
-    | { type: 'unsubscribe' } 
+    | { type: 'unsubscribe' }
     | { type: 'ping' }
     | { type: 'pong' };
 
-type WSResponse = 
+type WSResponse =
     | { type: 'welcome'; message: string }
     | { type: 'subscribed' }
     | { type: 'unsubscribed' }
@@ -45,7 +46,7 @@ function parseMessage(event: Event): WSMessage | null {
         } else if (typeof event === 'object' && event !== null) {
             raw = JSON.stringify(event);
         } else {
-            logger.warn(`Received unexpected message type: ${event.type}`);
+            logger.warn(`Received unexpected message type: ${event?.type}`);
             return null;
         }
 
@@ -55,7 +56,7 @@ function parseMessage(event: Event): WSMessage | null {
         }
 
         const parsed = JSON.parse(raw);
-        
+
         if (!parsed || typeof parsed !== 'object' || !parsed.type) {
             logger.warn('Message missing required type field:', parsed);
             return null;
@@ -83,13 +84,13 @@ function removeClient(ws: any) {
 }
 
 export function setupWebSockets(app: Hono) {
-    const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
+    const {injectWebSocket, upgradeWebSocket} = createNodeWebSocket({app});
 
     app.get('/ws', upgradeWebSocket(() => ({
-        onOpen(_, ws) {
+        onOpen(event, ws) {
             logger.info('WebSocket client connected');
             addClient(ws);
-            
+
             sendMessage(ws, {
                 type: 'welcome',
                 message: 'Connected to Nounberg Terminal'
@@ -105,20 +106,20 @@ export function setupWebSockets(app: Hono) {
             switch (message.type) {
                 case 'subscribe':
                     addClient(ws);
-                    sendMessage(ws, { type: 'subscribed' });
+                    sendMessage(ws, {type: 'subscribed'});
                     logger.debug('Client subscribed to events');
                     break;
 
                 case 'unsubscribe':
                     removeClient(ws);
-                    sendMessage(ws, { type: 'unsubscribed' });
+                    sendMessage(ws, {type: 'unsubscribed'});
                     logger.debug('Client unsubscribed from events');
                     break;
 
                 case 'ping':
-                    sendMessage(ws, { 
-                        type: 'pong', 
-                        timestamp: new Date().toISOString() 
+                    sendMessage(ws, {
+                        type: 'pong',
+                        timestamp: new Date().toISOString()
                     });
                     break;
 
@@ -141,18 +142,19 @@ export function setupWebSockets(app: Hono) {
             removeClient(ws);
         }
     })));
-    
+
     logger.info('WebSocket route registered at /ws');
-    return { injectWebSocket };
+    return {injectWebSocket};
 }
 
-export async function startNotificationListener(db: DbContext) {
-    const pgClient = createDbClient();
-    await pgClient.connect();
+export async function startNotificationListener() {
+    const pgClient = new Client({
+        connectionString: process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'
+    });
 
-    await pgClient.query('LISTEN event_created');
+    await pgClient.connect();
     await pgClient.query('LISTEN event_updated');
-    
+
     pgClient.on('notification', async (notification) => {
         try {
             const eventId = notification.payload;
@@ -161,7 +163,7 @@ export async function startNotificationListener(db: DbContext) {
                 return;
             }
 
-            const rawEvent = await db.auctionEvents.getEventById(eventId);
+            const rawEvent = await getEventById(eventId);
             if (!rawEvent) {
                 logger.warn(`Event ${eventId} not found in database`);
                 return;
@@ -169,7 +171,7 @@ export async function startNotificationListener(db: DbContext) {
 
             const transformedEvent = transformEvent(rawEvent);
             broadcastEvent(transformedEvent);
-            
+
         } catch (error) {
             logger.error('Error handling notification:', error);
         }
@@ -177,7 +179,6 @@ export async function startNotificationListener(db: DbContext) {
 
     logger.info('PostgreSQL notification listener started');
 
-    // Ping connected clients every 30 seconds
     const pingInterval = setInterval(() => {
         broadcastMessage({
             type: 'ping',
@@ -225,29 +226,10 @@ export function broadcastMessage(message: WSResponse) {
     if (removed > 0) {
         logger.debug(`Cleaned up ${removed} dead connections`);
     }
-    
+
     if (message.type !== 'ping') { // Don't log ping messages
         logger.debug(`Broadcast ${message.type} to ${sent} clients`);
     }
-    
+
     return sent;
-}
-
-export function getConnectionStats() {
-    let active = 0;
-    let stale = 0;
-    
-    for (const client of subscribedClients) {
-        if (client.readyState === WebSocket.OPEN) {
-            active++;
-        } else {
-            stale++;
-        }
-    }
-
-    return {
-        total: subscribedClients.size,
-        active,
-        stale
-    };
 }

@@ -1,5 +1,5 @@
 import pg from 'pg';
-import {AuctionEvent} from "./repositories";
+import {AuctionEvent} from "./auction-event";
 
 class DbContext {
     private readonly pool: pg.Pool;

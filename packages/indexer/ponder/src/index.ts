@@ -14,7 +14,7 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
     const blockNumber = event.block.number;
     const blockTimestamp = event.block.timestamp;
     const logIndex = event.log.logIndex;
-    const id = `${txHash}_${logIndex}`;
+    const id = event.id;
 
     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
     const headline = `Auction started for Noun #${nounId.toString()}`;
@@ -65,7 +65,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
     const blockNumber = event.block.number;
     const blockTimestamp = event.block.timestamp;
     const logIndex = event.log.logIndex;
-    const id = `${txHash}_${logIndex}`;
+    const id = event.id;
 
     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
     const displayBidder = `${sender.slice(0, 6)}...${sender.slice(-4)}`;
@@ -81,7 +81,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
         blockTimestamp,
         logIndex,
         bidder: sender,
-        value: value.toString(),
+        valueWei: value.toString(),
         extended,
         headline,
         thumbnailUrl,
@@ -90,7 +90,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
         blockNumber: Number(blockNumber),
         blockTimestamp,
         logIndex,
-        value: value.toString(),
+        valueWei: value.toString(),
         extended
     });
 
@@ -103,7 +103,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
         blockTimestamp: blockTimestamp.toString(),
         logIndex,
         bidder: sender,
-        value: value.toString(),
+        valueWei: value.toString(),
         extended,
         headline,
         thumbnailUrl,
@@ -119,7 +119,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
     const blockNumber = event.block.number;
     const blockTimestamp = event.block.timestamp;
     const logIndex = event.log.logIndex;
-    const id = `${txHash}_${logIndex}`;
+    const id = event.id;
 
     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
     const displayWinner = `${winner.slice(0, 6)}...${winner.slice(-4)}`;
@@ -135,7 +135,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
         blockTimestamp,
         logIndex,
         winner,
-        amount: amount.toString(),
+        amountWei: amount.toString(),
         headline,
         thumbnailUrl,
         createdAt: BigInt(Math.floor(Date.now() / 1000))
@@ -143,7 +143,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
         blockNumber: Number(blockNumber),
         blockTimestamp,
         logIndex,
-        amount: amount.toString()
+        amountWei: amount.toString()
     });
 
     const eventData: EventData = {
@@ -155,7 +155,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
         blockTimestamp: blockTimestamp.toString(),
         logIndex,
         winner,
-        amount: amount.toString(),
+        amountWei: amount.toString(),
         headline,
         thumbnailUrl,
         createdAt: Math.floor(Date.now() / 1000)

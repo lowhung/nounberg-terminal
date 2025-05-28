@@ -15,11 +15,11 @@ export interface EventData {
     endTime?: number;
 
     bidder?: string;
-    value?: string;
+    valueWei?: string;
     extended?: boolean;
 
     winner?: string;
-    amount?: string;
+    amountWei?: string;
 
     headline: string;
 }

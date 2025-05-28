@@ -54,15 +54,6 @@ export default function EventCard({ event, isNew = false }) {
                             </div>
                         )}
                         
-                        {event.valueUsd && (
-                            <div className="flex gap-2 items-center">
-                                <span className="text-noun-text-muted font-medium">USD:</span>
-                                <span className="text-green-400 font-semibold">
-                                    ${parseFloat(event.valueUsd).toLocaleString()}
-                                </span>
-                            </div>
-                        )}
-
                         {event.bidder && (
                             <div className="flex gap-2 items-center">
                                 <span className="text-noun-text-muted font-medium">Bidder:</span>
@@ -98,15 +89,6 @@ export default function EventCard({ event, isNew = false }) {
                             </div>
                         )}
                         
-                        {event.amountUsd && (
-                            <div className="flex gap-2 items-center">
-                                <span className="text-noun-text-muted font-medium">USD:</span>
-                                <span className="text-green-400 font-semibold">
-                                    ${parseFloat(event.amountUsd).toLocaleString()}
-                                </span>
-                            </div>
-                        )}
-
                         {event.winner && (
                             <div className="flex gap-2 items-center">
                                 <span className="text-noun-text-muted font-medium">Winner:</span>

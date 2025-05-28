@@ -1,34 +1,8 @@
-import pg from 'pg';
-import {AuctionEvent} from "./repositories";
+import {drizzle} from 'drizzle-orm/node-postgres';
+import {Pool} from 'pg';
 
-export class DbContext {
-    private pool: pg.Pool;
-    private _auctionEvents: AuctionEvent | null = null;
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'
+});
 
-    constructor(connectionString?: string) {
-        this.pool = new pg.Pool({
-            connectionString: connectionString || process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'
-        });
-    }
-
-    get auctionEvents(): AuctionEvent {
-        if (!this._auctionEvents) {
-            this._auctionEvents = new AuctionEvent(this.pool);
-        }
-        return this._auctionEvents;
-    }
-
-    async close(): Promise<void> {
-        await this.pool.end();
-    }
-}
-
-export function createDbContext(connectionString?: string): DbContext {
-    return new DbContext(connectionString);
-}
-
-export function createDbClient(connectionString?: string): pg.Client {
-    return new pg.Client({
-        connectionString: connectionString || process.env.DATABASE_URL || 'postgres://nounberg:nounberg@localhost:5432/nounberg'
-    });
-}
+export const db = drizzle(pool);

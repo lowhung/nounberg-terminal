@@ -15,34 +15,16 @@ export interface EventData {
     endTime?: number;
 
     bidder?: string;
-    value?: string;
+    valueWei?: string;
     extended?: boolean;
 
     winner?: string;
-    amount?: string;
+    amountWei?: string;
 
     headline: string;
 }
 
-export type JobType = 'enrich_event';
-export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-export interface Job {
-    id: number;
-    event_id: string;
-    type: JobType;
-    status: JobStatus;
-    attempts: number;
-    data: any;
-    error?: string;
-    createdAt: Date;
-    updatedAt: Date;
-}
-
-export interface BullMQJobData extends EventData {
-}
-
-export interface BullMQJobResult {
+export interface JobResult {
     success: boolean;
     eventId: string;
 }

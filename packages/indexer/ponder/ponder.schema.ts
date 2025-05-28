@@ -16,13 +16,13 @@ export const auctionEvents = onchainTable("auction_events",
 
         bidder: t.hex(),
         bidderEns: t.text(),
-        value: t.numeric(),
+        valueWei: t.numeric(),
         valueUsd: t.numeric(),
         extended: t.boolean(),
 
         winner: t.hex(),
         winnerEns: t.text(),
-        amount: t.numeric(),
+        amountWei: t.numeric(),
         amountUsd: t.numeric(),
 
         headline: t.text().notNull(),

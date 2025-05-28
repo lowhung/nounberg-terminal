@@ -61,12 +61,12 @@ export class CacheService {
         return await this.lockManager.withLock(cacheKey, async () => {
             const cachedPrice = await this.redisClient.get<number>(cacheKey);
             if (cachedPrice !== null) {
-                logger.info(`Cache hit for ETH price key ${cacheKey}`);
+                logger.debug(`Cache hit for ETH price key ${cacheKey}`);
                 return cachedPrice;
             }
 
             const hourStartDate = new Date(hourlyTimestamp * 1000);
-            const hourEndDate = new Date(hourStartDate.getTime() + TIME.HOUR * 1000); // Add 1 hour
+            const hourEndDate = new Date(hourStartDate.getTime() + TIME.HOUR * 1000);
             
             const startTimeIso = hourStartDate.toISOString();
             const endTimeIso = hourEndDate.toISOString();

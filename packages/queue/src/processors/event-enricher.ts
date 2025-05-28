@@ -1,15 +1,15 @@
 import {Job} from 'bullmq';
 import {formatEther} from 'viem';
-import {BullMQJobResult, EventData} from '../types';
+import {JobResult, EventData} from '../types';
 import { createDbContext } from '../db';
 import {getCacheService} from "../cache";
 import {logger} from "../logger";
 
-export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
+export default async function (job: Job<EventData>): Promise<JobResult> {
     try {
         const eventData = job.data;
         const eventId = eventData.id;
-        const {type, nounId, blockNumber, blockTimestamp, winner, amount, bidder, value, headline} = eventData;
+        const {type, nounId, blockNumber, blockTimestamp, winner, amountWei, bidder, valueWei, headline} = eventData;
 
         logger.debug(`Processing enrichment job for event ${eventId}`);
 
@@ -25,17 +25,17 @@ export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
         let updatedHeadline = headline;
 
         let priceUsd: number | null = null;
-        if (value || amount) {
+        if (valueWei || amountWei) {
             priceUsd = await cacheService.getEthPrice(blockTimestampBigInt);
         }
 
-        if (value && priceUsd !== null) {
-            const ethValue = parseFloat(formatEther(BigInt(value)));
+        if (valueWei && priceUsd !== null) {
+            const ethValue = parseFloat(formatEther(BigInt(valueWei)));
             valueUsd = ethValue * priceUsd;
         }
 
-        if (amount && priceUsd !== null) {
-            const ethAmount = parseFloat(formatEther(BigInt(amount)));
+        if (amountWei && priceUsd !== null) {
+            const ethAmount = parseFloat(formatEther(BigInt(amountWei)));
             amountUsd = ethAmount * priceUsd;
         }
 
@@ -47,15 +47,15 @@ export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
             winnerEns = await cacheService.getEnsName(winner, blockNumber);
         }
 
-        if (type === 'bid' && value) {
-            const ethValue = formatEther(BigInt(value));
+        if (type === 'bid' && valueWei) {
+            const ethValue = formatEther(BigInt(valueWei));
             const displayName = bidderEns || `${bidder?.slice(0, 6)}...${bidder?.slice(-4)}`;
 
             updatedHeadline = valueUsd
                 ? `Bid placed on Noun #${nounId} for ${ethValue} Ξ ($${valueUsd.toLocaleString(undefined, {maximumFractionDigits: 0})}) by ${displayName}`
                 : `Bid placed on Noun #${nounId} for ${ethValue} Ξ by ${displayName}`;
-        } else if (type === 'settled' && amount) {
-            const ethAmount = formatEther(BigInt(amount));
+        } else if (type === 'settled' && amountWei) {
+            const ethAmount = formatEther(BigInt(amountWei));
             const displayName = winnerEns || `${winner?.slice(0, 6)}...${winner?.slice(-4)}`;
 
             updatedHeadline = amountUsd
