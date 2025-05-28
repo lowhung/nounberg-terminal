@@ -25,15 +25,22 @@ export default async function (job: Job<EventData>): Promise<JobResult> {
             getCacheService()
         ]);
 
+        const existingEvent = await dbContext.auctionEvents.getById(eventId);
+
+        if (!existingEvent) {
+            throw new Error(`Event ${eventId} not found in database`);
+        }
+
         const enhancedData = await enhanceEventData(job.data, cacheService);
 
-        const {rowsAffected} = await dbContext.auctionEvents.updateEnrichedEventRetry(eventId, enhancedData);
+        const {rowsAffected} = await dbContext.auctionEvents.updateEnrichedEvent(eventId, enhancedData);
+        if (rowsAffected === 0) {
+            logger.warn(`No rows updated for event ${eventId}`);
+        }
 
-        return {success: !!rowsAffected, eventId};
-
+        return {success: true, eventId};
     } catch (error: any) {
-        logger.error({msg: `Error processing enrichment job for event ${eventId}`, error});
-        return {success: false, eventId};
+        throw new Error(error.message);
     }
 }
 

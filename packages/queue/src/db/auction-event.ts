@@ -1,5 +1,30 @@
-import {logger} from "../logger";
 import {DbContext} from "./context";
+
+
+type AuctionEventRecord = {
+    id: string;
+    type: 'created' | 'bid' | 'settled';
+    nounId: number;
+    txHash: string;
+    blockNumber: number;
+    blockTimestamp: bigint;
+    logIndex: number;
+    startTime: bigint | null;
+    endTime: bigint | null;
+    bidder: string | null;
+    bidderEns: string | null;
+    valueWei: string | null;
+    valueUsd: string | null;
+    extended: boolean | null;
+    winner: string | null;
+    winnerEns: string | null;
+    amountWei: string | null;
+    amountUsd: string | null;
+    headline: string;
+    thumbnailUrl: string | null;
+    createdAt: bigint;
+    processedAt: bigint | null;
+};
 
 export class AuctionEvent {
     private dbContext: DbContext;
@@ -10,7 +35,7 @@ export class AuctionEvent {
         this.schema = schema;
     }
 
-    private async updateEnrichedEvent(eventId: string, enrichedData: {
+    async updateEnrichedEvent(eventId: string, enrichedData: {
         bidderEns?: string | null;
         valueUsd?: number | null;
         winnerEns?: string | null;
@@ -48,40 +73,13 @@ export class AuctionEvent {
 
         return { rowsAffected };
     }
-    /*
-    * Update an enriched event with retry logic
-     */
-    async updateEnrichedEventRetry(eventId: string, enrichedData: {
-        bidderEns?: string | null;
-        valueUsd?: number | null;
-        winnerEns?: string | null;
-        amountUsd?: number | null;
-        headline?: string;
-    }): Promise<{ rowsAffected: number }> {
-        try {
-            let result = await this.updateEnrichedEvent(eventId, enrichedData);
 
-            if (result.rowsAffected > 0) {
-                logger.debug(`Successfully updated enriched event ${eventId} (${result.rowsAffected} rows affected)`);
-                return result;
-            }
+    async getById(eventId: string): Promise<AuctionEventRecord | null> {
+        const result = await this.dbContext.query(`
+        SELECT * FROM ${this.schema}.auction_events 
+        WHERE id = $1
+    `, [eventId]);
 
-            logger.debug(`Event ${eventId} not found on first attempt, retrying once after brief delay`);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            result = await this.updateEnrichedEvent(eventId, enrichedData);
-
-            if (result.rowsAffected === 0) {
-                logger.warn(`Event ${eventId} not found for enrichment after retry`);
-            } else {
-                logger.debug(`Successfully updated enriched event ${eventId} on retry (${result.rowsAffected} rows affected)`);
-            }
-
-            return result;
-
-        } catch (error) {
-            logger.error({msg: `Error processing enriched event ${eventId}`, error});
-            throw error;
-        }
+        return result.rows[0] || null;
     }
 }

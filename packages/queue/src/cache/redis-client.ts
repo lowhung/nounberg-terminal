@@ -6,7 +6,7 @@ export class RedisClient {
 
     constructor(url: string = process.env.REDIS_URL || 'redis://localhost:6379') {
         this.client = new Redis(url, { db: 1 });
-        logger.info(`RedisClient initialized with Redis at ${url}`);
+        logger.info(`Redis connection initialized: ${this.client.options.host}`);
     }
 
     async close() {
