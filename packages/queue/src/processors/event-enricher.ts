@@ -1,7 +1,5 @@
 import {Job} from 'bullmq';
 import {formatEther} from 'viem';
-import {createPublicClient, http} from 'viem';
-import {mainnet} from 'viem/chains';
 import {BullMQJobResult, EventData} from '../types';
 import { createDbContext } from '../db';
 import {getCacheService} from "../cache";
@@ -11,18 +9,12 @@ export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
     try {
         const eventData = job.data;
         const eventId = eventData.id;
-        const {type, nounId, blockNumber, blockTimestamp, winner, amount, bidder, value} = eventData;
+        const {type, nounId, blockNumber, blockTimestamp, winner, amount, bidder, value, headline} = eventData;
 
-        logger.info(`Processing enrichment job for event ${eventId}`);
+        logger.debug(`Processing enrichment job for event ${eventId}`);
 
         const dbContext = createDbContext();
         const cacheService = await getCacheService();
-
-        const rpcUrl = process.env.ETHEREUM_RPC_URL || process.env.PONDER_RPC_URL_1;
-        const provider = createPublicClient({
-            chain: mainnet,
-            transport: http(rpcUrl || ''),
-        });
 
         const blockTimestampBigInt = BigInt(blockTimestamp);
 
@@ -30,7 +22,7 @@ export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
         let amountUsd: number | null = null;
         let bidderEns: string | null = null;
         let winnerEns: string | null = null;
-        let headline = eventData.headline;
+        let updatedHeadline = headline;
 
         let priceUsd: number | null = null;
         if (value || amount) {
@@ -48,29 +40,29 @@ export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
         }
 
         if (bidder) {
-            bidderEns = await cacheService.getEnsName(bidder, blockNumber, provider);
+            bidderEns = await cacheService.getEnsName(bidder, blockNumber);
         }
 
         if (winner) {
-            winnerEns = await cacheService.getEnsName(winner, blockNumber, provider);
+            winnerEns = await cacheService.getEnsName(winner, blockNumber);
         }
 
         if (type === 'bid' && value) {
             const ethValue = formatEther(BigInt(value));
             const displayName = bidderEns || `${bidder?.slice(0, 6)}...${bidder?.slice(-4)}`;
 
-            headline = valueUsd
+            updatedHeadline = valueUsd
                 ? `Bid placed on Noun #${nounId} for ${ethValue} Ξ ($${valueUsd.toLocaleString(undefined, {maximumFractionDigits: 0})}) by ${displayName}`
                 : `Bid placed on Noun #${nounId} for ${ethValue} Ξ by ${displayName}`;
         } else if (type === 'settled' && amount) {
             const ethAmount = formatEther(BigInt(amount));
             const displayName = winnerEns || `${winner?.slice(0, 6)}...${winner?.slice(-4)}`;
 
-            headline = amountUsd
+            updatedHeadline = amountUsd
                 ? `Noun #${nounId} sold for ${ethAmount} Ξ ($${amountUsd.toLocaleString(undefined, {maximumFractionDigits: 0})}) to ${displayName}`
                 : `Noun #${nounId} sold for ${ethAmount} Ξ to ${displayName}`;
         } else if (type === 'created') {
-            headline = `Auction started for Noun #${nounId}`;
+            updatedHeadline = `Auction started for Noun #${nounId}`;
         }
 
         await dbContext.auctionEvents.updateEnrichedEvent(eventId, {
@@ -78,7 +70,7 @@ export default async function (job: Job<EventData>): Promise<BullMQJobResult> {
             valueUsd,
             winnerEns,
             amountUsd,
-            headline
+            headline: updatedHeadline,
         });
 
         return {success: true, eventId};
