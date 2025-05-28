@@ -296,7 +296,7 @@ export class AuctionEvent {
                 const cursorCondition = direction === 'forward'
                     ? `AND (block_timestamp, log_index, id) < ($${params.length + 1}, $${params.length + 2}, $${params.length + 3})`
                     : `AND (block_timestamp, log_index, id) > ($${params.length + 1}, $${params.length + 2}, $${params.length + 3})`;
-                
+
                 query += ` ${cursorCondition}`;
                 params.push(cursorData.blockTimestamp, cursorData.logIndex, cursorData.id);
             }
@@ -354,7 +354,7 @@ export class AuctionEvent {
         nounId?: number;
     }) {
         logger.warn('Using deprecated offset-based pagination. Consider migrating to cursor-based pagination.');
-        
+
         let query = `
             SELECT *
             FROM ${this.schema}.auction_events
@@ -444,40 +444,4 @@ export class AuctionEvent {
         }
     }
 
-    /**
-     * Get pagination statistics for monitoring
-     */
-    async getPaginationStats() {
-        try {
-            const stats = await this.poolOrClient.query(`
-                SELECT 
-                    schemaname,
-                    tablename,
-                    indexname,
-                    pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
-                    idx_scan as scans,
-                    idx_tup_read as tuples_read,
-                    idx_tup_fetch as tuples_fetched
-                FROM pg_stat_user_indexes 
-                WHERE tablename = 'auction_events'
-                ORDER BY pg_relation_size(indexrelid) DESC
-            `);
-
-            const tableStats = await this.poolOrClient.query(`
-                SELECT 
-                    pg_size_pretty(pg_total_relation_size('${this.schema}.auction_events')) as total_size,
-                    pg_size_pretty(pg_relation_size('${this.schema}.auction_events')) as table_size,
-                    (SELECT reltuples FROM pg_class WHERE relname = 'auction_events') as estimated_rows
-            `);
-
-            return {
-                indexes: stats.rows,
-                table: tableStats.rows[0],
-                timestamp: new Date().toISOString()
-            };
-        } catch (error) {
-            logger.error('Error fetching pagination stats:', error);
-            throw new Error(`Database error when fetching stats: ${(error as Error).message}`);
-        }
-    }
 }

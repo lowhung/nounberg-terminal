@@ -1,4 +1,3 @@
-// TODO: Great candidate for a shared package
 import pc from "picocolors";
 import {type DestinationStream, type LevelWithSilent, pino} from "pino";
 
@@ -58,7 +57,6 @@ function createLogger() {
         stream,
     );
 
-    // Helper to normalize input to the structured format
     const normalizeLogInput = (msgOrOptions: string | object, error?: Error) => {
         if (typeof msgOrOptions === 'string') {
             return {msg: msgOrOptions, service: serviceName, error};
@@ -83,7 +81,6 @@ function createLogger() {
     };
 }
 
-// Ponder's exact formatting
 const levels = {
     60: {label: "FATAL", colorLabel: pc.bgRed("FATAL")},
     50: {label: "ERROR", colorLabel: pc.red("ERROR")},

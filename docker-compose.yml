@@ -36,17 +36,17 @@ services:
     volumes:
       - redis-data:/data
 
-  memcached:
-    image: memcached:1.6-alpine
-    restart: always
-    ports:
-      - "11211:11211"
-    command: memcached -m 128
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "11211" ]
-      interval: 5s
-      timeout: 5s
-      retries: 3
+#  memcached:
+#    image: memcached:1.6-alpine
+#    restart: always
+#    ports:
+#      - "11211:11211"
+#    command: memcached -m 128
+#    healthcheck:
+#      test: [ "CMD", "nc", "-z", "localhost", "11211" ]
+#      interval: 5s
+#      timeout: 5s
+#      retries: 3
 
   indexer:
     build:
@@ -92,45 +92,15 @@ services:
       SERVICE_NAME: api
       PORT: 3000
 
-  workers:
-    build:
-      context: ./packages/workers
-      dockerfile: Dockerfile
-    command: npm run start
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      memcached:
-        condition: service_started
-      redis:
-        condition: service_healthy
-    environment:
-      <<: *logging-env
-      DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
-      DATABASE_SCHEMA: public
-      SERVICE_NAME: workers
-      ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
-      CACHE_URL: memcached:11211
-      REDIS_URL: redis://redis:6379
-    deploy:
-      replicas: 3
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-
   queue:
     build:
-      context: ./packages/workers
+      context: ./packages/queue
       dockerfile: Dockerfile
     command: npm run start:api
     restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
-      workers:
-        condition: service_started
     ports:
       - "3001:3001"
     healthcheck:
@@ -140,9 +110,45 @@ services:
       retries: 3
       start_period: 40s
     environment:
-      SERVICE_NAME: queue
+      <<: *logging-env
+      SERVICE_NAME: queue-api
       REDIS_URL: redis://redis:6379
       PORT: 3001
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=3001"
+      - "prometheus.io/path=/metrics"
+
+  workers:
+    build:
+      context: ./packages/queue
+      dockerfile: Dockerfile
+    command: npm run start
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+#      memcached:
+#        condition: service_started
+      redis:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
+    environment:
+      <<: *logging-env
+      DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
+      DATABASE_SCHEMA: public
+      SERVICE_NAME: worker
+      ETHEREUM_RPC_URL: ${PONDER_RPC_URL_1}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
+      CACHE_URL: memcached:11211
+      REDIS_URL: redis://redis:6379
+    deploy:
+      replicas: 1  # Reduce to 1 worker replica to limit DB connections
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   frontend:
     build:

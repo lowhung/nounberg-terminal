@@ -20,4 +20,6 @@ export interface EventData {
 
     winner?: string;
     amount?: string;
+
+    headline: string;
 }

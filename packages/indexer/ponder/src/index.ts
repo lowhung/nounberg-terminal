@@ -17,7 +17,7 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
     const id = `${txHash}_${logIndex}`;
 
     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
-    const basicHeadline = `Auction started for Noun #${nounId.toString()}`;
+    const headline = `Auction started for Noun #${nounId.toString()}`;
 
     await context.db.insert(auctionEvents).values({
         id,
@@ -29,7 +29,7 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
         logIndex,
         startTime: Number(startTime),
         endTime: Number(endTime),
-        headline: basicHeadline,
+        headline,
         thumbnailUrl,
         createdAt: BigInt(Math.floor(Date.now() / 1000))
     }).onConflictDoUpdate({
@@ -51,8 +51,9 @@ ponder.on("NounsAuctionHouse:AuctionCreated", async ({event, context}) => {
         logIndex,
         startTime: Number(startTime),
         endTime: Number(endTime),
+        headline,
         thumbnailUrl,
-        createdAt: Math.floor(Date.now() / 1000)
+        createdAt: Math.floor(Date.now() / 1000),
     };
 
     await addEventEnrichmentJob(eventData);
@@ -69,7 +70,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
     const displayBidder = `${sender.slice(0, 6)}...${sender.slice(-4)}`;
     const ethValue = formatEther(BigInt(value.toString()));
-    const basicHeadline = `Bid placed on Noun #${nounId} for ${ethValue} Ξ by ${displayBidder}`;
+    const headline = `Bid placed on Noun #${nounId} for ${ethValue} Ξ by ${displayBidder}`;
 
     await context.db.insert(auctionEvents).values({
         id,
@@ -82,7 +83,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
         bidder: sender,
         value: value.toString(),
         extended,
-        headline: basicHeadline,
+        headline,
         thumbnailUrl,
         createdAt: BigInt(Math.floor(Date.now() / 1000))
     }).onConflictDoUpdate({
@@ -104,6 +105,7 @@ ponder.on("NounsAuctionHouse:AuctionBid", async ({event, context}) => {
         bidder: sender,
         value: value.toString(),
         extended,
+        headline,
         thumbnailUrl,
         createdAt: Math.floor(Date.now() / 1000)
     };
@@ -122,7 +124,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
     const thumbnailUrl = `https://noun.pics/${nounId.toString()}`;
     const displayWinner = `${winner.slice(0, 6)}...${winner.slice(-4)}`;
     const ethAmount = formatEther(BigInt(amount.toString()));
-    const basicHeadline = `Noun #${nounId} sold for ${ethAmount} Ξ to ${displayWinner}`;
+    const headline = `Noun #${nounId} sold for ${ethAmount} Ξ to ${displayWinner}`;
 
     await context.db.insert(auctionEvents).values({
         id,
@@ -134,7 +136,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
         logIndex,
         winner,
         amount: amount.toString(),
-        headline: basicHeadline,
+        headline,
         thumbnailUrl,
         createdAt: BigInt(Math.floor(Date.now() / 1000))
     }).onConflictDoUpdate({
@@ -154,6 +156,7 @@ ponder.on("NounsAuctionHouse:AuctionSettled", async ({event, context}) => {
         logIndex,
         winner,
         amount: amount.toString(),
+        headline,
         thumbnailUrl,
         createdAt: Math.floor(Date.now() / 1000)
     };

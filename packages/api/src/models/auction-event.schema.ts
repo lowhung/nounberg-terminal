@@ -1,12 +1,12 @@
 import {z} from 'zod';
 import {formatEther} from 'viem';
 
-const formatUsd = (amount: number) => new Intl.NumberFormat('en-US', {
+const formatUsd = (amount: string) => new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-}).format(amount);
+    maximumFractionDigits: 2,
+}).format(parseFloat(amount));
 
 export const AuctionEventBaseSchema = z.object({
     id: z.string(),
@@ -33,7 +33,7 @@ export const AuctionBidEventSchemaRaw = AuctionEventBaseSchema.extend({
     bidder: z.string().optional().nullable(),
     bidderEns: z.string().optional().nullable(),
     value: z.string().optional().nullable(),
-    valueUsd: z.number().optional().nullable(),
+    valueUsd: z.string().optional().nullable(),
     extended: z.boolean().optional().nullable(),
 });
 
@@ -42,7 +42,7 @@ export const AuctionSettledEventSchemaRaw = AuctionEventBaseSchema.extend({
     winner: z.string().optional().nullable(),
     winnerEns: z.string().optional().nullable(),
     amount: z.string().optional().nullable(),
-    amountUsd: z.number().optional().nullable(),
+    amountUsd: z.string().optional().nullable(),
 });
 
 export const AuctionEventSchemaRaw = z.discriminatedUnion('type', [

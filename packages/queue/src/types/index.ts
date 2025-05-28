@@ -20,6 +20,8 @@ export interface EventData {
 
     winner?: string;
     amount?: string;
+
+    headline: string;
 }
 
 export type JobType = 'enrich_event';
