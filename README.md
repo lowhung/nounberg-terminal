@@ -4,8 +4,6 @@ A real-time Nouns DAO auction tracking service that indexes blockchain events, e
 
 ## 🏗️ Architecture Overview
 
-Nounberg Terminal is built as a microservices architecture with clear separation of concerns:
-
 ![Nounberg Terminal Architecture](./nounberg-excalidraw.png)
 
 *Simple architecture diagram showing data flow between services, external API integrations, and caching relationships.*
