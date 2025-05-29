@@ -16,7 +16,7 @@ function createWorkerRedisConnection() {
     });
 
     // Set max listeners to prevent EventEmitter warnings (due to high worker concurrency)
-    redis.setMaxListeners(20);
+    redis.setMaxListeners(50);
     return redis;
 }
 

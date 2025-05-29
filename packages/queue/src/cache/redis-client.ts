@@ -10,22 +10,8 @@ export class RedisClient {
         });
         
         // Set max listeners to prevent EventEmitter warnings
-        this.client.setMaxListeners(20);
-        
-        // Add error handling
-        this.client.on('error', (error) => {
-            logger.error('Cache Redis connection error:', error);
-        });
-        
-        this.client.on('connect', () => {
-            logger.debug('Cache Redis connected');
-        });
-        
-        this.client.on('ready', () => {
-            logger.debug('Cache Redis ready');
-        });
-        
-        logger.info(`Redis cache connection initialized: ${this.client.options.host}`);
+        this.client.setMaxListeners(50);
+        logger.info(`Redis cache connection initialized`);
     }
 
     async close() {

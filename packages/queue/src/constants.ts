@@ -13,7 +13,7 @@ export const TIME = {
 };
 
 export const DEFAULT_TTL = {
-    ENS_NAME: 2 * TIME.DAY, // 48 hours - ENS can change
+    ENS_NAME: 2 * TIME.DAY, // 48 hours - ENS can change (e.g. ownership transfer)
     ETH_PRICE_RECENT: TIME.DAY, // 24 hours - very recent prices might still fluctuate slightly
     ETH_PRICE_OLD: 7 * TIME.DAY, // 7 days - settled prices, probably stable
     ETH_PRICE_HISTORICAL: TIME.YEAR, // 1 year - historical data never changes

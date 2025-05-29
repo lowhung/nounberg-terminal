@@ -12,20 +12,7 @@ function createQueueRedisConnection() {
     });
 
     // Set max listeners to prevent EventEmitter warnings (due to high worker concurrency)
-    redis.setMaxListeners(20);
-    
-    redis.on('error', (error) => {
-        logger.error('Queue Redis connection error:', error);
-    });
-    
-    redis.on('connect', () => {
-        logger.debug('Queue Redis connected');
-    });
-    
-    redis.on('ready', () => {
-        logger.debug('Queue Redis ready');
-    });
-    
+    redis.setMaxListeners(50);
     return redis;
 }
 

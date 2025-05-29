@@ -4,7 +4,7 @@ import {logger} from "../logger";
 import {convertWeiToUsd} from "../utils/formatters";
 import {generateHeadline} from "../utils/headlines";
 import {createDbContext} from "../db/context";
-import {getCacheService} from "../cache";
+import {CacheService, getCacheService} from "../cache";
 
 
 export default async function (job: Job<EventData>): Promise<JobResult> {
@@ -37,7 +37,7 @@ export default async function (job: Job<EventData>): Promise<JobResult> {
     }
 }
 
-async function enhanceEventData(eventData: EventData, cacheService: any): Promise<EnhancedEventData> {
+async function enhanceEventData(eventData: EventData, cacheService: CacheService): Promise<EnhancedEventData> {
     const {type, nounId, blockNumber, blockTimestamp, winner, amountWei, bidder, valueWei} = eventData;
 
     const [bidderEns, winnerEns, ethPrice] = await Promise.all([

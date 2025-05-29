@@ -1,11 +1,13 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {useAuctionEvents, useRealTimeEvents} from '../hooks/useAuctionEvents';
 import EventCard from "./EventCard";
+import {useQueryParams} from '../hooks/useQueryParams';
 
 export const AuctionEventsList = () => {
+    const {queryParams, updateQueryParams} = useQueryParams();
     const [filter, setFilter] = useState({
-        type: '',
-        nounId: ''
+        type: queryParams.type || '',
+        nounId: queryParams.nounId || ''
     });
     const [currentPage, setCurrentPage] = useState('initial');
     const [liveEvents, setLiveEvents] = useState([]);
@@ -27,7 +29,16 @@ export const AuctionEventsList = () => {
         refreshInterval: 30000
     });
 
+    const isActivelyQuerying = Boolean(filter.type || filter.nounId);
+
     const handleNewEvent = useCallback((newEvent) => {
+        // Pause consuming new websocket events if user is actively querying (filtering)
+        // or if user has navigated away from the initial live view
+        // This matches the behavior of "Load More" which also pauses live events
+        if (isActivelyQuerying || currentPage === 'navigated') {
+            return;
+        }
+
         const matchesTypeFilter = !filter.type || newEvent.type === filter.type;
         const matchesNounFilter = !filter.nounId || newEvent.nounId === parseInt(filter.nounId);
 
@@ -50,7 +61,7 @@ export const AuctionEventsList = () => {
                 });
             }, 3000);
         }
-    }, [filter.type, filter.nounId]);
+    }, [filter.type, filter.nounId, isActivelyQuerying, currentPage]);
 
     const wsConnected = useRealTimeEvents(handleNewEvent);
 
@@ -66,27 +77,45 @@ export const AuctionEventsList = () => {
     }, [liveEvents, events, currentPage]);
 
     const handleFilterChange = (key, value) => {
-        setFilter(prev => ({
-            ...prev,
+        const newFilter = {
+            ...filter,
             [key]: value
-        }));
-        setCurrentPage('initial');
+        };
+        setFilter(newFilter);
+        
+        updateQueryParams({
+            type: newFilter.type || undefined,
+            nounId: newFilter.nounId || undefined
+        });
+        
+        const hasAnyFilter = newFilter.type || newFilter.nounId;
+        setCurrentPage(hasAnyFilter ? 'navigated' : 'initial');
+        
         setLiveEvents([]);
         setNewEventIds(new Set());
     };
 
     const clearFilters = () => {
         setFilter({type: '', nounId: ''});
+        
+        updateQueryParams({});
+        
         setCurrentPage('initial');
         setLiveEvents([]);
         setNewEventIds(new Set());
     };
 
     const getDisplayText = () => {
+        if (isActivelyQuerying) {
+            return `Browsing filtered auction events`;
+        }
         if (currentPage === 'initial' && liveEvents.length > 0) {
             return `Showing live events + recent history`;
         }
-        return `Recent auction events`;
+        if (currentPage === 'initial') {
+            return `Live auction events - waiting for updates`;
+        }
+        return `Browsing historical auction events`;
     };
 
     const handleLoadMore = useCallback(async () => {
@@ -95,14 +124,33 @@ export const AuctionEventsList = () => {
     }, [loadMore]);
 
     const handleBackToLive = useCallback(async () => {
+        // Clear filters when going back to live view
+        setFilter({type: '', nounId: ''});
+        updateQueryParams({});
+        
         await backToLive();
         setCurrentPage('initial');
-    }, [backToLive]);
+        setLiveEvents([]);
+        setNewEventIds(new Set());
+    }, [backToLive, updateQueryParams]);
 
     const handleRefresh = useCallback(async () => {
         await refresh();
         setCurrentPage('initial');
     }, [refresh]);
+
+    // Sync filter state with URL query params and set appropriate page mode
+    useEffect(() => {
+        const newFilter = {
+            type: queryParams.type || '',
+            nounId: queryParams.nounId || ''
+        };
+        setFilter(newFilter);
+        
+        // Set page mode based on whether there are any filters
+        const hasAnyFilter = newFilter.type || newFilter.nounId;
+        setCurrentPage(hasAnyFilter ? 'navigated' : 'initial');
+    }, [queryParams]);
 
     useEffect(() => {
         if (currentPage === 'initial') {
@@ -150,7 +198,15 @@ export const AuctionEventsList = () => {
                         }
                         `}></div>
                         <span className="font-medium">
-                            {wsConnected ? 'Connected to Nounberg Terminal' : 'Disconnected - Trying to reconnect...'}
+                            {wsConnected 
+                                ? (isActivelyQuerying 
+                                    ? 'Connected to Nounberg Terminal (browsing mode - live events paused)' 
+                                    : currentPage === 'navigated'
+                                    ? 'Connected to Nounberg Terminal (browsing historical events)'
+                                    : 'Connected to Nounberg Terminal (live mode)'
+                                  )
+                                : 'Disconnected - Trying to reconnect...'
+                            }
                         </span>
                         {currentPage === 'initial' && liveEvents.length > 0 && (
                             <span className="ml-auto text-xs bg-noun-accent/20 text-noun-accent px-2 py-1 rounded-full">
@@ -163,7 +219,10 @@ export const AuctionEventsList = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
                             <h2 className="text-3xl font-bold text-noun-text mb-2">
-                                {currentPage === 'initial' ? 'Live Auction Events' : 'Historical Auction Events'}
+                                {isActivelyQuerying || currentPage === 'navigated' 
+                                    ? 'Browse Auction Events'
+                                    : 'Live Auction Events'
+                                }
                             </h2>
                             <div className="text-noun-text-muted">
                                 <p>{getDisplayText()}</p>
@@ -175,15 +234,12 @@ export const AuctionEventsList = () => {
                             </div>
                         </div>
 
-                        {currentPage === 'navigated' && (
+                        {(currentPage === 'navigated' || isActivelyQuerying) && (
                             <button
-                                onClick={() => {
-                                    setCurrentPage('initial');
-                                    refresh();
-                                }}
+                                onClick={handleBackToLive}
                                 className="btn-primary"
                             >
-                                ← Back to Live View
+                                Back to Live View
                             </button>
                         )}
                     </div>
