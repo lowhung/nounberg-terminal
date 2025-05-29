@@ -57,7 +57,6 @@ function createLogger() {
         stream,
     );
 
-    // Helper to normalize input to the structured format
     const normalizeLogInput = (msgOrOptions: string | object, error?: Error) => {
         if (typeof msgOrOptions === 'string') {
             return {msg: msgOrOptions, service: serviceName, error};

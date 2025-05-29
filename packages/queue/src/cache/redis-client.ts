@@ -5,8 +5,27 @@ export class RedisClient {
     private client: Redis;
 
     constructor(url: string = process.env.REDIS_URL || 'redis://localhost:6379') {
-        this.client = new Redis(url, { db: 1 });
-        logger.info(`Redis connection initialized: ${this.client.options.host}`);
+        this.client = new Redis(url, { 
+            db: 1,
+        });
+        
+        // Set max listeners to prevent EventEmitter warnings
+        this.client.setMaxListeners(20);
+        
+        // Add error handling
+        this.client.on('error', (error) => {
+            logger.error('Cache Redis connection error:', error);
+        });
+        
+        this.client.on('connect', () => {
+            logger.debug('Cache Redis connected');
+        });
+        
+        this.client.on('ready', () => {
+            logger.debug('Cache Redis ready');
+        });
+        
+        logger.info(`Redis cache connection initialized: ${this.client.options.host}`);
     }
 
     async close() {

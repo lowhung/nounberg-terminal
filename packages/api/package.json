@@ -10,6 +10,7 @@
   "dependencies": {
     "@hono/node-server": "^1.9.0",
     "@hono/node-ws": "^1.1.4",
+    "@hono/zod-openapi": "^0.19.7",
     "drizzle-orm": "^0.43.1",
     "hono": "^4.5.0",
     "ioredis": "^5.6.1",

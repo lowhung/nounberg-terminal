@@ -1,18 +1,11 @@
 import {Job} from 'bullmq';
-import {EventData, JobResult} from '../types';
-import {getCacheService} from "../cache";
+import {EnhancedEventData, EventData, JobResult} from '../types';
 import {logger} from "../logger";
-import {createDbContext} from "../db/context";
 import {convertWeiToUsd} from "../utils/formatters";
 import {generateHeadline} from "../utils/headlines";
+import {createDbContext} from "../db/context";
+import {getCacheService} from "../cache";
 
-interface EnhancedData {
-    bidderEns?: string | null;
-    valueUsd?: number | null;
-    winnerEns?: string | null;
-    amountUsd?: number | null;
-    headline: string;
-}
 
 export default async function (job: Job<EventData>): Promise<JobResult> {
     const eventId = job.data.id;
@@ -44,7 +37,7 @@ export default async function (job: Job<EventData>): Promise<JobResult> {
     }
 }
 
-async function enhanceEventData(eventData: EventData, cacheService: any): Promise<EnhancedData> {
+async function enhanceEventData(eventData: EventData, cacheService: any): Promise<EnhancedEventData> {
     const {type, nounId, blockNumber, blockTimestamp, winner, amountWei, bidder, valueWei} = eventData;
 
     const [bidderEns, winnerEns, ethPrice] = await Promise.all([

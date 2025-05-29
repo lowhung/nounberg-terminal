@@ -1,10 +1,10 @@
-import {Hono} from 'hono';
 import {createNodeWebSocket} from '@hono/node-ws';
 import WebSocket from 'ws';
 import {transformEvent} from './models/transformers';
 import {logger} from './logger';
 import {getEventById} from "./db/auction-event";
 import {Client} from "pg";
+import {Hono} from "hono";
 
 const subscribedClients = new Set<WebSocket>();
 

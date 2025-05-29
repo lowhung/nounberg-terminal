@@ -40,7 +40,6 @@ services:
     build:
       context: ./packages/indexer
       dockerfile: Dockerfile
-    # Remove the command - let entrypoint handle it
     restart: unless-stopped
     depends_on:
       postgres:
@@ -116,8 +115,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-#      memcached:
-#        condition: service_started
       redis:
         condition: service_healthy
       queue:

@@ -1,14 +1,13 @@
+import {EventsQuerySchema} from "./models/auction-event.schema";
 import {serve} from '@hono/node-server';
-import {Hono} from 'hono';
 import {cors} from 'hono/cors';
-import docsRouter from './docs/router';
 import {broadcastMessage, setupWebSockets, startNotificationListener} from './websocket';
 import {logger} from './logger';
 import {getEvents} from './db/auction-event';
 import {db} from './db';
 import {auctionEvents} from './db/schema';
-import {EventsQuerySchema} from './models/auction-event.schema';
 import {transformCursorPaginatedResponse} from './models/transformers';
+import {Hono} from "hono";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -19,7 +18,6 @@ app.use('*', cors({
     credentials: true,
 }));
 
-app.route('/docs', docsRouter);
 app.get('/', (c) => {
     return c.redirect('/docs');
 });

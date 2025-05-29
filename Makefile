@@ -7,12 +7,12 @@ BLUE := \033[34m
 YELLOW := \033[33m
 RESET := \033[0m
 
-help: ## Show this help message
+help:
 	@echo "$(BLUE)Nounberg Terminal$(RESET)"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "$(GREEN)%-15s$(RESET) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-dev: ## Start shared infrastructure (postgres, redis, memcached)
+dev: ## Start shared infrastructure (postgres, redis)
 	@echo "$(BLUE)Starting shared infrastructure...$(RESET)"
 	@docker compose -f docker-compose.dev.yml up -d
 	@echo "$(GREEN)✅ Infrastructure ready$(RESET)"

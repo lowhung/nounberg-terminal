@@ -28,3 +28,12 @@ export interface JobResult {
     success: boolean;
     eventId: string;
 }
+
+
+export interface EnhancedEventData {
+    bidderEns?: string | null;
+    valueUsd?: number | null;
+    winnerEns?: string | null;
+    amountUsd?: number | null;
+    headline: string;
+}

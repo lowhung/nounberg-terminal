@@ -1,17 +1,15 @@
 import {AuctionEventSchema} from "./auction-event.schema";
 import {logger} from '../logger';
 
-
 /**
  * Transform raw database event to API-ready format
- * 1. Convert snake_case to camelCase
- * 2. Apply Zod schema transformations (formatEther, USD formatting, etc.)
  */
 export function transformEvent(rawEvent: any) {
     try {
         return AuctionEventSchema.parse(rawEvent);
     } catch (error) {
         logger.error({ msg: 'Error transforming event', error, rawEvent });
+        throw error;
     }
 }
 

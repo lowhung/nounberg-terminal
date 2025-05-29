@@ -6,21 +6,37 @@ import {logger} from './logger';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
-export function createRedisConnection() {
-    return new Redis(REDIS_URL, {
-        maxRetriesPerRequest: null,
-        db: 0, // Use database 0 for queue operations
+function createQueueRedisConnection() {
+    const redis = new Redis(REDIS_URL, {
+        db: 0,
     });
+
+    // Set max listeners to prevent EventEmitter warnings (due to high worker concurrency)
+    redis.setMaxListeners(20);
+    
+    redis.on('error', (error) => {
+        logger.error('Queue Redis connection error:', error);
+    });
+    
+    redis.on('connect', () => {
+        logger.debug('Queue Redis connected');
+    });
+    
+    redis.on('ready', () => {
+        logger.debug('Queue Redis ready');
+    });
+    
+    return redis;
 }
 
-let redisConnection: Redis | null = null;
+let queueRedisConnection: Redis | null = null;
 
-function getRedisConnection(): Redis {
-    if (!redisConnection) {
-        redisConnection = createRedisConnection();
-        logger.info('Created new Redis connection for queue operations');
+function getQueueRedisConnection(): Redis {
+    if (!queueRedisConnection) {
+        queueRedisConnection = createQueueRedisConnection();
+        logger.info('Created Redis connection for queue producer');
     }
-    return redisConnection;
+    return queueRedisConnection;
 }
 
 let eventEnrichmentQueue: Queue | null = null;
@@ -28,7 +44,7 @@ let eventEnrichmentQueue: Queue | null = null;
 export function getEventEnrichmentQueue(): Queue {
     if (!eventEnrichmentQueue) {
         eventEnrichmentQueue = new Queue(QUEUE_NAMES.EVENT_ENRICHMENT, {
-            connection: getRedisConnection(),
+            connection: getQueueRedisConnection(),
             defaultJobOptions: {
                 attempts: 3,
                 backoff: {
@@ -45,9 +61,7 @@ export function getEventEnrichmentQueue(): Queue {
 export async function addEventEnrichmentJob(eventData: EventData) {
     const queue = getEventEnrichmentQueue();
     try {
-        const job = await queue.add(QUEUE_NAMES.EVENT_ENRICHMENT, eventData, {
-            jobId: eventData.id,
-        });
+        const job = await queue.add(QUEUE_NAMES.EVENT_ENRICHMENT, eventData);
         logger.debug(`Added job ${job.id} to enrich event ${eventData.id}`);
         return job;
     } catch (error: any) {
@@ -56,15 +70,16 @@ export async function addEventEnrichmentJob(eventData: EventData) {
     }
 }
 
-
-export async function closeQueueResources() {
+export async function closeQueueProducerResources() {
     if (eventEnrichmentQueue) {
         await eventEnrichmentQueue.close();
         eventEnrichmentQueue = null;
+        logger.info('Closed event enrichment queue');
     }
 
-    if (redisConnection) {
-        redisConnection.disconnect();
-        redisConnection = null;
+    if (queueRedisConnection) {
+        queueRedisConnection.disconnect();
+        queueRedisConnection = null;
+        logger.info('Closed queue producer Redis connection');
     }
 }
