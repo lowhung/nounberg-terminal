@@ -60,7 +60,7 @@ Full schema lives in `packages/indexer/ponder/schema.ts`; trimmed here for reada
 
 Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first worker populates the cache, others read the cached value — eliminating duplicate calls without heavy coordination.
 
-> **Future optimisation:** `SETNX` is simple but single‑instance. For multi‑node resilience we could switch to a [Redlock](https://redis.io/docs/interact/locks/)‑style algorithm or use a small Lua script that performs “get or fetch then set” atomically.
+> **Future optimisation:** `SETNX` is simple but single‑instance. For multi‑node resilience we could switch to a [Redlock](https://redis.io/docs/latest/develop/use/patterns/distributed-locks/)‑style algorithm or use a small Lua script that performs “get or fetch then set” atomically.
 
 ---
 
