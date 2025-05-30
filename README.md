@@ -81,8 +81,7 @@ Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first w
 
 ```bash
 # Prepare env
-cp .env.example .env
-# add PONDER_RPC_URL_1 and ALCHEMY_API_KEY
+cp .env.example .env       # add PONDER_RPC_URL_1 and ALCHEMY_API_KEY
 
 make start                 # build & launch full stack
 ```
@@ -91,8 +90,8 @@ make start                 # build & launch full stack
 | ------------------------ | ------------------------------ |
 | `http://localhost:8080`  | Frontend demo (live & history) |
 | `http://localhost:3000`  | REST API                       |
-| `ws://localhost:3001/ws` | Queue API                      |
 | `ws://localhost:3000/ws` | WebSocket feed                 |
+| `ws://localhost:3001`    | Queue API                      |
 | `http://localhost:42069` | Ponder GraphQL explorer        |
 
 ---
