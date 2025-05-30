@@ -27,20 +27,19 @@ A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, 
 
 All events reside in a single **`auction_events`** table keyed by the **on‑chain** `event_id` (transaction hash + log index, exposed by Ponder as `event.id`).
 
-<div align="center">
 | column            | type               | purpose                          |
 | ----------------- | ------------------ | -------------------------------- |
-| `event_id`        | `text PRIMARY KEY` | deterministic unique id from log |
-| `event_type`      | `enum`             | `created`, `bid`, `settled`      |
-| `block_timestamp` | `timestamptz`      | used for cursor pagination       |
+| `event_id`        | `text PRIMARY KEY` | unique id frome event            |
+| `event_type`      | `text`             | `created`, `bid`, `settled`      |
+| `block_timestamp` | `numeric(78)`      | used for cursor pagination       |
 | `headline`        | `text`             | human‑readable summary           |
 | …                 | …                  | other enrichment fields          |
-</div>
+
 
 ### Why denormalise?
 
 * The feed is consumed chronologically; explicit columns (many nullable) avoid costly joins or unions.
-* Cursor pagination using **`block_timestamp DESC, event_id DESC`** is stable for this single‑collection feed. To be honest, this only works well because it's a single contract table, but if you had to support additional contracts, timestamps from parallel streams will interleave. You'd then either:
+* Cursor pagination using **`block_timestamp DESC, event_id DESC`** is fairly stable for this single‑collection feed. To be honest, this works well only because it's a single contract table, but if you had to support additional contracts, timestamps from parallel streams will interleave. You'd then either:
    • keep per‑contract tables and paginate within each, or
    • introduce a composite key (collection_id, block_timestamp, event_id) and paginate per collection_id. This avoids “hot shard” skew, and keeps cursor order deterministic.
 * Updates are simple `UPDATE … WHERE event_id = ?` — no race with inserts.
