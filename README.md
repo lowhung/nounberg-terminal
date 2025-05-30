@@ -159,7 +159,7 @@ Makefile snippets are included below for reference.
 
 ### Internal Communication
 
-* **Why gRPC (future)** — Strongly‑typed protobuf contracts and efficient streaming are ideal once service count grows. Drawbacks: schema‑evolution rules (append‑only fields) and CI plumbing to regenerate types. REST is fine for the current two‑hop topology, but a migration path is planned.
+* **HTTP vs gRPC** — In production I’ve used gRPC for internal hops because the Protobuf contract gives compile‑time type‑safety, you get lean binary payloads, and built‑in streaming on a single HTTP/2 connection. The schema code‑gen (generating protobuf files) step is a extra chore, and you need to respect backwards-compatibility through appending of new fields. For this coding‑challenge prototype I kept the indexer→queue call as simple HTTP/JSON.
 
 ### Real‑Time Delivery
 
