@@ -69,10 +69,10 @@ Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first w
 ## 🔄 End‑to‑End Flow
 
 1. **Detect** — Indexer writes base row keyed by `event_id`.
-2. **Enqueue** — Job submitted to BullMQ.
+2. **Enqueue** — Job submitted to Queue API.
 3. **Lock / Set & Fetch** — Workers use a single instance lock manager where only one worker can set the price for a rounded timestamp (round to nearest hour for demo) at a time. Workers that can't acquire the lock poll the cache key directly (rather than waiting for the lock to release), ensuring they get the data when lock-holding worker populates it.
 4. **Update** — Worker `UPDATE`s row with enrichment (no UPSERT needed because row already exists).
-5. **Notify** — `NOTIFY auction_events` with `event_id`.
+5. **Notify** — `NOTIFY auction_updated` with `event_id`.
 6. **Broadcast** — API pushes JSON to WebSocket clients; REST reflects immediately.
 
 ---
