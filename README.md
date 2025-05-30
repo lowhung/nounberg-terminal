@@ -151,7 +151,7 @@ Makefile snippets are included below for reference.
 ### Blockchain Tooling
 
 * **Foundry (Forge + Anvil)** stack was really easy to set up via Docker, and provides repeatable mainnet‑fork tests for deploying the mock contract, and broadcasting events using Forge. Cardano does have a testnet with a faucet, but I'm not aware of a tool like Foundry + Anvil + Forge for Cardano. The documentation is clear and I'm looking forward to using it more.
-* **Open ABIs (Etherscan)** find the event signatures and calldata layouts for Noun House was very easy, so log‑decoding and debugging are markedly faster than in ecosystems where contract interfaces are opaque (like can be the case in Cardano for closed-source AMM / order-book exchange contracts.
+* **Open ABIs (Etherscan):** one thing I really appreciate about Etherscan is that the underly contracts code is shared in the scanner. Having a central place to observe the contracts, receipt logs, event signatures and calldata layouts etc for Noun House was super easy. Cardano doesn't have a screener / scanner app that shows all of this information. Most of the contract interfaces we work with are in team repositories, and in some cases contract interfaces are opaque (for certain closed-source AMM / order-book exchange contracts).
 
 ### Service Boundaries
 
