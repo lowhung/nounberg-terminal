@@ -145,6 +145,8 @@ Top‑level **`make test`** orchestrates:
 2. **deploy** — deploys test contracts + simulates auction.
 3. **test‑ponder** — asserts indexer/worker output.
 
+https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExOTI2cWZkeHp3NnBvZnY5aGswYjhjeWhrZmplMWN2MXowM24xbjI3YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nlHN6K6xkmFmaUsmyE/giphy.gif
+
 Makefile snippets are included below for reference.
 
 ---
