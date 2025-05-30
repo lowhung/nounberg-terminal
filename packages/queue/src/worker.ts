@@ -49,7 +49,7 @@ async function startWorker() {
             QUEUE_NAMES.EVENT_ENRICHMENT,
             processorUrl,
             {
-                concurrency: 10,
+                concurrency: 1,
                 connection: redisConnection,
             }
         );

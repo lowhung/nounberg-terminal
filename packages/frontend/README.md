@@ -42,7 +42,7 @@ This will create a production-ready build in the `build` directory.
 
 ## Integration with Backend
 
-The frontend automatically connects to the WebSocket endpoint at `/ws` on the same host as the application is served from. Make sure your Nounberg Terminal backend is configured to accept WebSocket connections at this endpoint.
+The frontend automatically connects to the WebSocket endpoint at `/ws` on the same host as the application is served from.
 
 ### API Endpoints Used
 
@@ -69,10 +69,3 @@ frontend/
 │   └── index.js           # Application entry point
 └── package.json           # Dependencies and scripts
 ```
-
-## Customization
-
-The application uses CSS for styling. You can modify the CSS files to change the appearance:
-
-- `src/App.css` - Main application styling
-- `src/components/*.css` - Component-specific styling
