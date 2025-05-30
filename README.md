@@ -148,8 +148,8 @@ Makefile snippets are included below for reference.
 
 ### Blockchain Tooling
 
-* **Foundry (Forge + Anvil)** delivers quick, repeatable mainnet‑fork tests — something absent in Cardano’s tool‑chain and a huge velocity boost when validating complex auction flows.
-* **Open ABIs (Etherscan, Sourcify)** mean event signatures and calldata layouts are one search away, so log‑decoding and debugging are markedly faster than in ecosystems where contract interfaces are opaque.
+* **Foundry (Forge + Anvil)** stack was really easy to set up via Docker, and provides repeatable mainnet‑fork tests for deploying the mock contract, and broadcasting events using Forge. Cardano does have a testnet with a faucet, but I'm not aware of a tool like Foundry + Anvil + Forge for Cardano. The documentation is clear and I'm looking forward to using it more.
+* **Open ABIs (Etherscan)** find the event signatures and calldata layouts for Noun House was very easy, so log‑decoding and debugging are markedly faster than in ecosystems where contract interfaces are opaque (like can be the case in Cardano for closed-source AMM / order-book exchange contracts.
 
 ### Service Boundaries
 
@@ -169,9 +169,9 @@ Makefile snippets are included below for reference.
 
 ### Upsert vs Update
 
-* **Current flow:** Indexer performs the insert via Ponder’s Store API, which buffers writes in‑memory during historical sync and flushes them to PostgreSQL with COPY — fast and re‑org‑safe. Workers then issue parameterised UPDATEs to append enrichment. This keeps insert logic in one place — the component that understands rollbacks — and avoids cross‑service contention.
+* **Current flow:** Indexer performs the insert via Ponder’s Store API, which buffers writes in‑memory during historical sync and flushes them to PostgreSQL with COPY. Workers then issue parameterised UPDATEs to append enrichment. This keeps insert logic in one place — the component that how to handle the re-orgs — and avoids cross‑service contention.
 
-* **Scaling:** In production, more worker replicas (Docker Compose ▶ `--scale workers=N`, ECS service, etc.) consume the same queue. Because every job ultimately resolves to a single UPDATE, contention is minimal and database locks remain short‑lived. BullMQ’s batch jobs / pipelines can further boost throughput by letting each worker acknowledge multiple completed jobs in one round‑trip.
+* **Scaling:** In production, more worker replicas (Docker Compose ▶ `--scale workers=N`, ECS service, etc.) consume the same queue. Because every job ultimately resolves to a single UPDATE, contention is minimal and database locks remain short‑lived. BullMQ’s [batch jobs](https://docs.bullmq.io/bullmq-pro/batches) / pipelines can further boost throughput by letting each worker acknowledge multiple completed jobs in one round‑trip.
 
 * **Why not use Store API in workers?** Store API is part of Ponder’s runtime and only available inside its hooks; the drizzle it exposes is read‑only. The workers run as a standalone Node service with their own connection pool; they therefore use parameterised raw SQL, which also keeps transaction boundaries explicit and straightforward.
 
