@@ -100,7 +100,7 @@ make start                 # build & launch full stack
 ### GET `/api/events`
 
 ```http
-GET /api/events?cursor=&limit=20&type=bid&nounId=721
+GET /api/events?cursor=1708356695&limit=20&type=bid&nounId=721
 ```
 
 **Query params**
@@ -164,34 +164,23 @@ Makefile snippets are included below for reference.
 ### Real‑Time Delivery
 
 * **PostgreSQL LISTEN/NOTIFY** ensures notifications fire only after the row is committed — no dual‑write race that sometimes occurs with Redis Pub/Sub.
-* **WebSocket in Hono vs dedicated gateway** — Hono’s WS support works but needs explicit upgrade handling. For production, a separate realtime service (Fastify, native `ws`, uWebSockets.js) would simplify long‑lived connection management and keep the REST layer stateless.
-* **Stateful connections** — The API process currently holds all active WebSocket clients in memory. That works for a single‑instance PoC, but horizontal scaling would require either sticky sessions **or** an external broker (e.g., Redis Pub/Sub, NATS) so any replica can broadcast to all clients.
-* WebSocket chosen over SSE for bidirectional features (future auth/filter commands). Rate‑limiting and per‑user filters are on the roadmap.
+* **WebSocket in Hono vs dedicated gateway** — Hono’s WS support works but needs explicit upgrade handling. For production, a separate realtime service (Express with native `ws`, Fastify, uWebSockets.js) would simplify long‑lived connection management, and keep the REST layer stateless.
+* **Stateful connections** — The API keeps every WebSocket client in RAM, with a single replica that’s okay, but scaling vertically would require one of a few things:
+• Connection affinity (sticky sessions). Let the L7 proxy hash on a stable token (cookie, auth header, or URL param) so each socket always lands on the same pod. If the pod dies every socket drops, and you can’t scale below the number of affinity buckets.
+• Shared broker / pub+sub (Redis / NATS / Kafka). Every pod publishes the event, and independently fan-outs to its own clients. Replicas publish a headline, and every gateway instance fan‑outs to its local clients.  You can get zero‑downtime rolling deploys, and scaling at the cost of one more infra component.
 
 ### Upsert vs Update
 
-* **Current flow:** Indexer performs the insert via Ponder’s Store API, which buffers writes in‑memory during historical sync and flushes them to PostgreSQL with COPY. Workers then issue parameterised UPDATEs to append enrichment. This keeps insert logic in one place — the component that how to handle the re-orgs — and avoids cross‑service contention.
+* **Current flow:** Indexer performs the insert via Ponder’s Store API, which buffers writes in‑memory during historical sync and flushes them to PostgreSQL with COPY. Workers GET + UPDATE the event from the job data. This keeps insert logic in one place — the component that knows how to handle the re-orgs — and avoids cross‑service contention.
 
-* **Scaling:** In production, more worker replicas (Docker Compose ▶ `--scale workers=N`, ECS service, etc.) consume the same queue. Because every job ultimately resolves to a single UPDATE, contention is minimal and database locks remain short‑lived. BullMQ’s [batch jobs](https://docs.bullmq.io/bullmq-pro/batches) / pipelines can further boost throughput by letting each worker acknowledge multiple completed jobs in one round‑trip.
+* **Scaling:** In production, more worker replicas (Docker Compose ▶ `--scale workers=N`, ECS service, etc.) consume the same queue. Because every job ultimately resolves to a single GET + UPDATE, contention is fairly minimal, and database locks remain short‑lived. BullMQ’s [batch jobs](https://docs.bullmq.io/bullmq-pro/batches) / pipelines could help by letting each worker acknowledge multiple completed jobs in one round‑trip.
 
-* **Why not use Store API in workers?** Store API is part of Ponder’s runtime and only available inside its hooks; the drizzle it exposes is read‑only. The workers run as a standalone Node service with their own connection pool; they therefore use parameterised raw SQL, which also keeps transaction boundaries explicit and straightforward.
-
-* **Future improvement:** Introduce a small type‑safe query helper (e.g. wrapping `pg` with Zod schemas) or migrate to an ORM such as **Drizzle** once it supports `LISTEN/NOTIFY`. This would align typing across services without pulling in the Ponder‑specific Store API, which—as mentioned above—is unavailable outside the Indexer context.
+* **Gripe with Ponder Drizzle API** Store API is part of Ponder’s runtime and only available inside its hooks; the drizzle it exposes is read‑only and lacks listen/notify. The API and workers run as a standalone Node service with their own connection pool; the API uses drizzle + PG for listen/notify, and the workers use raw SQL.
 
 ### Observability
 
-* **Prometheus metrics** already exposed by Indexer and Queue/Worker; dashboards live under `monitoring/`. API metrics will be added after the WebSocket refactor.
-* **Structured logging** — Plan to extract a shared `@nounberg/logger` (pino wrapper, similar to Ponder’s internal logger) so every service outputs JSON logs with trace/context fields, making aggregation in Loki or Elasticsearch straightforward.
-
----
-
-## 🔮 Future Work
-
-* **EIP‑4361 (Sign‑In with Ethereum)** for authenticated WebSocket streams.
-* Migrate internal REST to **gRPC**.
-* Implement request‑level **rate‑limiting** once auth is in place.
-* Extract shared libs (`@nounberg/logger`, types, SQL) into workspace package.
-* Seed full historical ETH price table or run internal oracle.
+* **Prometheus metrics** already exposed by Indexer and Queue/Worker.
+* **Structured logging** — Used a replica of Ponder’s internal logger using pino just for consistency / convenience, logging pretty for the purpose of the demo, but would use JSON for making aggregation in Loki or Elasticsearch (or any other solution) straightforward.
 
 ---
 
