@@ -17,7 +17,7 @@ A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, 
 | **Workers**<br>`packages/queue`     | BullMQ worker‑pool (Node TS) | Fetches jobs, enriches with USD price, ENS, thumbnail, and headline, then **GETs + UPDATEs** the event row (no upsert). Inserts are left solely to the Indexer so Ponder can manage rollbacks; if the row isn’t present yet the job simply retries with exponential backoff. | • Redis cache (48 h ENS, 1 h price) behind lock‑manager keys so only one worker populates a miss<br>• Alchemy historical price API<br>• Thumbnails via `https://noun.pics/{nounId}`                            |
 | **API**<br>`packages/api`           | Hono.js                      | Cursor‑based REST `/api/events` and WebSocket `/ws`; relays Postgres `LISTEN/NOTIFY`.                                                                                                                                                               | • Single service handles HTTP **and** WS for PoC; for prod a dedicated realtime gateway is preferred<br>• **No OpenAPI docs** — endpoint schema described in README                                            |
 | **Frontend**<br>`packages/frontend` | React + TailwindCSS          | Lets users (1) watch the live stream, (2) **scroll forward** through history via cursor pagination, (3) filter by event type or noun ID.                                                                                                            | –                                                                                                                                                                                                              |
-| **Datastores**                      | PostgreSQL / Redis           | Truth store and cache/queue backend.                                                                                                                                                                                                                | • Triggers emit `NOTIFY auction_events` consumed by the API                                                                                                                                                    |
+| **Datastores**                      | PostgreSQL / Redis           | Truth store and cache/queue backend.                                                                                                                                                                                                                | • Triggers emit `NOTIFY auction_updated` consumed by the API                                                                                                                                                    |
 
 ---
 
@@ -58,7 +58,7 @@ Full schema lives in `packages/indexer/ponder/schema.ts`; trimmed here for reada
 | ENS name      | 48 h                                                                                  | `lock:ens:0xd8dA6B…`    |
 | ETH/USD price | ≤ 1 h old → **24 h TTL**<br>1 h – 24 h old → **7 d TTL**<br>＞ 24 h old → **30 d TTL** | `lock:price:<hour‑iso>` |
 
-Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first worker populates the cache, others read the cached value — eliminating duplicate calls without heavy coordination.
+Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first worker populates the cache, others read the cached value — eliminating duplicate calls ("thundering herd".
 
 > **Future optimisation:** `SETNX` is simple but single‑instance. For multi‑node resilience we could switch to a [Redlock](https://redis.io/docs/latest/develop/use/patterns/distributed-locks/)‑style algorithm or use a small Lua script that performs “get or fetch then set” atomically.
 
@@ -68,7 +68,7 @@ Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first w
 
 1. **Detect** — Indexer writes base row keyed by `event_id`.
 2. **Enqueue** — Job submitted to BullMQ.
-3. **Lock & Fetch** — Worker locks ENS/price keys and fetches as needed.
+3. **Lock / Set & Fetch** — Workers use a single instance lock manager where only one worker can set the price for a rounded timestamp (round to nearest hour for demo) at a time. Workers that can't acquire the lock poll the cache key directly (rather than waiting for the lock to release), ensuring they get the data when lock-holding worker populates it.
 4. **Update** — Worker `UPDATE`s row with enrichment (no UPSERT needed because row already exists).
 5. **Notify** — `NOTIFY auction_events` with `event_id`.
 6. **Broadcast** — API pushes JSON to WebSocket clients; REST reflects immediately.
@@ -89,6 +89,7 @@ make start                 # build & launch full stack
 | ------------------------ | ------------------------------ |
 | `http://localhost:8080`  | Frontend demo (live & history) |
 | `http://localhost:3000`  | REST API                       |
+| `ws://localhost:3001/ws` | Queue API                      |
 | `ws://localhost:3000/ws` | WebSocket feed                 |
 | `http://localhost:42069` | Ponder GraphQL explorer        |
 
@@ -99,7 +100,7 @@ make start                 # build & launch full stack
 ### GET `/api/events`
 
 ```http
-GET /api/events?cursor=2025‑05‑29T16:0xabc…&limit=20&type=bid&nounId=721
+GET /api/events?cursor=&limit=20&type=bid&nounId=721
 ```
 
 **Query params**
@@ -126,8 +127,8 @@ Returns newest‑first events; exact JSON schema is documented inline in code.
 ### Health Endpoints
 
 ```text
-GET /api/health        # API liveness
-GET /queue/health      # Queue & worker pool
+GET localhost:3000/api/health        # API liveness
+GET localhost:3001/health            # Queue & worker pool
 ```
 
 ---
@@ -154,7 +155,7 @@ Makefile snippets are included below for reference.
 ### Service Boundaries
 
 * **Dedicated API vs Indexer** — REST/WebSocket traffic runs in its own process while chain ingestion remains isolated; this separation simplifies scaling decisions (CPU for workers, I/O for API) and keeps failure domains narrow.
-* **Worker isolation** — Enrichment is CPU‑bound and parallel‑friendly; running it in a discrete container group lets Kubernetes HPA scale based on queue depth without impacting request latency on the API.
+* **Worker Isolation & Scaling ** — Enrichment is CPU‑bound and parallel‑friendly. [BullMQ concurrency](https://docs.bullmq.io/guide/workers/concurrency) scaling makes each worker handle more jobs concurrently when the queue is busy. Alternatively you could use Docker Swarm (or another orchestration tool) to do worker scaling, have a hook to watch queue depth metrics via Prometheus, and scale according.
 
 ### Internal Communication
 
