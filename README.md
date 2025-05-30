@@ -111,7 +111,7 @@ GET /api/events?cursor=1708356695&limit=20&type=bid&nounId=721
 
 | param    | description                              |
 | -------- | ---------------------------------------- |
-| `cursor` | opaque string `block_timestamp:event_id` |
+| `cursor` | opaque string `block_timestamp` |
 | `limit`  | up to 100                                |
 | `type`   | optional `created\|bid\|settled`         |
 | `nounId` | optional filter                          |
