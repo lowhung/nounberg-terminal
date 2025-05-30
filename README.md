@@ -122,7 +122,7 @@ Returns newest‑first events; exact JSON schema is documented inline in code.
 
 ```jsonc
 // Client → Server
-{ "type": "subscribe", "filters": { "nounId": 721 } }
+{ "type": "subscribe" }
 
 // Server → Client
 { "type": "event", "data": { /* event object */ } }
