@@ -172,6 +172,7 @@ Makefile snippets are included below for reference.
 * **Stateful connections** — The API keeps every WebSocket client in RAM, with a single replica that’s okay, but scaling vertically would require one of a few things:
 • Connection affinity (sticky sessions). Let the L7 proxy hash on a stable token (cookie, auth header, or URL param) so each socket always lands on the same pod. If the pod dies every socket drops, and you can’t scale below the number of affinity buckets.
 • Shared broker / pub+sub (Redis / NATS / Kafka). Every pod publishes the event, and independently fan-outs to its own clients. Replicas publish a headline, and every gateway instance fan‑outs to its local clients.  You can get zero‑downtime rolling deploys, and scaling at the cost of one more infra component.
+* **Subscription filtering & rate‑limits** — As an enhancement, you could support consumers sending a subscription message with filters (e.g nounId, eventType, etc.). The API would store those predicates per socket, and forward only matching events. EIP‑4361 auth tokens gate users from the websocket, what a client can subscribe to, and a small token‑bucket guards against subscribe‑spamming.
 
 ### Upsert vs Update
 
