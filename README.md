@@ -38,10 +38,12 @@ All events reside in a single **`auction_events`** table keyed by the **on‑cha
 ### Why denormalise?
 
 * The feed is consumed chronologically; explicit columns (many nullable) avoid costly joins or unions.
-* Cursor pagination using **`block_timestamp DESC, event_id DESC`** remains stable even while new rows stream in.
+* Cursor pagination using **`block_timestamp DESC, event_id DESC`** is stable for this single‑collection feed. To be honest, this only works well because it's a single contract table, but if you had to support additional contracts, timestamps from parallel streams will interleave. You'd then either:
+   • keep per‑contract tables and paginate within each, or
+   • introduce a composite key (collection_id, block_timestamp, event_id) and paginate per collection_id. This avoids “hot shard” skew, and keeps cursor order deterministic.
 * Updates are simple `UPDATE … WHERE event_id = ?` — no race with inserts.
 
-If analytical or relational queries grow, a normalised shadow schema or materialised view can be built without touching the hot path.
+Lots of avenues to discuss with denormalizing the data if more analytical or relational queries are required -- you can build out a normalised shadow schema, or materialised view without touching the hot path.
 
 **Indexes in use** (defined via Ponder):
 
