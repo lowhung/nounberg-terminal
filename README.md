@@ -6,6 +6,8 @@ A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, 
 
 ## 🏗️ Architecture Overview
 
+![Nounberg Terminal Architecture](./nounberg-excalidraw.png)
+
 *Diagram shows event flow and external integrations; each service is detailed below.*
 
 ### Services
