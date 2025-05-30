@@ -27,6 +27,7 @@ A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, 
 
 All events reside in a single **`auction_events`** table keyed by the **on‑chain** `event_id` (transaction hash + log index, exposed by Ponder as `event.id`).
 
+<div align="center">
 | column            | type               | purpose                          |
 | ----------------- | ------------------ | -------------------------------- |
 | `event_id`        | `text PRIMARY KEY` | deterministic unique id from log |
@@ -34,6 +35,7 @@ All events reside in a single **`auction_events`** table keyed by the **on‑cha
 | `block_timestamp` | `timestamptz`      | used for cursor pagination       |
 | `headline`        | `text`             | human‑readable summary           |
 | …                 | …                  | other enrichment fields          |
+</div>
 
 ### Why denormalise?
 
