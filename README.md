@@ -1,6 +1,6 @@
 # Nounberg Terminal
 
-A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, **enriches** them with off‑chain context, produces concise human‑readable headlines, and serves both a paginated REST feed **and** a live WebSocket stream — all bootstrapped by a single `make start`.
+A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, **enriches** them with off‑chain context, produces concise human‑readable headlines, and serves both a paginated REST feed **and** a live WebSocket stream.
 
 ---
 
