@@ -5,10 +5,16 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,
 });
+
 
 apiClient.interceptors.request.use(
     (config) => {
+        const sessionId = localStorage.getItem('nounberg-session-id');
+        if (sessionId) {
+            config.headers['X-Session-ID'] = sessionId;
+        }
         return config;
     },
     (error) => {

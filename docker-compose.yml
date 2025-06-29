@@ -48,6 +48,8 @@ services:
         condition: service_healthy
       queue:
         condition: service_healthy
+    ports:
+      - "42069:42069"
     environment:
       <<: *logging-env
       DATABASE_URL: postgres://nounberg:nounberg@postgres:5432/nounberg
@@ -55,8 +57,7 @@ services:
       SERVICE_NAME: indexer
       PONDER_RPC_URL_1: ${PONDER_RPC_URL_1}
       QUEUE_API_URL: http://queue:3001
-    ports:
-      - "42069:42069"
+
 
   api:
     build:

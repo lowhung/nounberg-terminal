@@ -1,13 +1,14 @@
-import {EventsQuerySchema} from "./models/auction-event.schema";
+import {EventsQuerySchema} from "@/models/auction-event.schema";
 import {serve} from '@hono/node-server';
 import {cors} from 'hono/cors';
-import {broadcastMessage, setupWebSockets, startNotificationListener} from './websocket';
-import {logger} from './logger';
-import {getEvents} from './db/auction-event';
-import {db} from './db';
-import {auctionEvents} from './db/schema';
-import {transformCursorPaginatedResponse} from './models/transformers';
+import {broadcastMessage, setupWebSockets, startNotificationListener} from '@/websocket';
+import {logger} from '@/logger';
+import {getEvents} from '@/db/auction-event';
+import {db} from '@/db';
+import {auctionEvents} from '@/db/schema';
+import {transformCursorPaginatedResponse} from '@/models/transformers';
 import {Hono} from "hono";
+import {handleAuthStatus, handleLogout, handleNonce, handleVerify} from "@/auth";
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -21,6 +22,11 @@ app.use('*', cors({
 app.get('/', (c) => {
     return c.redirect('/docs');
 });
+
+app.get('/auth/nonce', handleNonce);
+app.post('/auth/verify', handleVerify);
+app.get('/auth/status', handleAuthStatus);
+app.post('/auth/logout', handleLogout);
 
 app.get('/api/events', async (c) => {
     try {

@@ -4,11 +4,12 @@
   "private": true,
   "dependencies": {
     "axios": "1.9.0",
+    "craco": "^0.0.3",
     "ethers": "^6.14.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "react-scripts": "^5.0.1",
+    "siwe": "^3.0.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
@@ -16,12 +17,11 @@
     "tailwindcss": "^3.4.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "dev": "react-scripts start",
-    "test": "react-scripts test",
-    "typecheck": "tsc --noEmit",
-    "eject": "react-scripts eject"
+    "start": "craco start",
+    "build": "craco build",
+    "dev": "craco start",
+    "test": "craco test",
+    "typecheck": "tsc --noEmit"
   },
   "eslintConfig": {
     "extends": [
