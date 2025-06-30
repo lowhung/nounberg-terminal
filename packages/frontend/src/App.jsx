@@ -7,7 +7,6 @@ import { AuthProvider } from './contexts/AuthContext';
 function App() {
     const [currentView, setCurrentView] = useState('static');
 
-    // Check URL params for initial view
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const viewParam = urlParams.get('view');
@@ -18,7 +17,6 @@ function App() {
 
     const handleViewChange = (view) => {
         setCurrentView(view);
-        // Update URL without page reload
         const url = new URL(window.location);
         url.searchParams.set('view', view);
         window.history.pushState({}, '', url);

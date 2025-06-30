@@ -40,7 +40,7 @@ export async function fetchEventsCursor(options = {}) {
  * @returns {WebSocket} - WebSocket connection
  */
 export function createWebSocketConnection() {
-    const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:3000';
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
     const ws = new WebSocket(`${wsUrl}/ws`);
 
     return ws;
@@ -51,7 +51,7 @@ export function createWebSocketConnection() {
  * @returns {WebSocket} - WebSocket connection with session info
  */
 export function createAuthenticatedWebSocketConnection() {
-    const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:3000';
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
 
     const sessionId = localStorage.getItem('nounberg-session-id');
 
