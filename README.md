@@ -29,7 +29,7 @@ All events reside in a single **`auction_events`** table keyed by the **on‑cha
 
 | column            | type               | purpose                          |
 | ----------------- | ------------------ | -------------------------------- |
-| `event_id`        | `textPRIMARYKEY` | unique id frome event            |
+| `event_id`        | `text PRIMARYKEY`  | unique id frome event            |
 | `event_type`      | `text`             | `created`, `bid`, `settled`      |
 | `block_timestamp` | `numeric(78)`      | used for cursor pagination       |
 | `headline`        | `text`             | human‑readable summary           |
@@ -161,7 +161,7 @@ Makefile snippets are included below for reference.
 ### Service Boundaries
 
 * **Dedicated API vs Indexer**— REST/WebSocket traffic runs in its own process while chain ingestion remains isolated; this separation simplifies scaling decisions (CPU for workers, I/O for API) and keeps failure domains narrow.
-* **Worker Isolation & Scaling **— Enrichment is CPU‑bound and parallel‑friendly. [BullMQ concurrency](https://docs.bullmq.io/guide/workers/concurrency) scaling makes each worker handle more jobs concurrently when the queue is busy. Alternatively you could use DockerSwarm (or another orchestration tool) to do worker scaling, have a hook to watch queue depth metrics via Prometheus, and scale according.
+* **Worker Isolation & Scaling**— Enrichment is CPU‑bound and parallel‑friendly. [BullMQ concurrency](https://docs.bullmq.io/guide/workers/concurrency) scaling makes each worker handle more jobs concurrently when the queue is busy. Alternatively you could use DockerSwarm (or another orchestration tool) to do worker scaling, have a hook to watch queue depth metrics via Prometheus, and scale according.
 
 ### Internal Communication
 
