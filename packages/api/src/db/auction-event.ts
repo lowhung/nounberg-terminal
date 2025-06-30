@@ -1,7 +1,7 @@
 import {and, desc, eq, lt} from 'drizzle-orm';
 import {auctionEvents} from "./schema";
 import {db} from "./index";
-import {logger} from "../logger";
+import {logger} from "@/logger";
 
 interface PaginationResult<T> {
     data: T[];

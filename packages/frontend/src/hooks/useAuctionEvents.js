@@ -1,5 +1,5 @@
 import {useState, useCallback, useEffect, useRef} from 'react';
-import {fetchEventsCursor, createWebSocketConnection} from '../api';
+import {fetchEventsCursor, createAuthenticatedWebSocketConnection} from '../api';
 
 const useDebounce = (value, delay) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -75,13 +75,10 @@ export const useAuctionEvents = (options = {}) => {
         await fetchEvents(nextCursor);
     }, [fetchEvents, loading, nextCursor]);
 
-    const backToLive = useCallback(async () => {
-        await refresh();
-    }, [refresh]);
-
     const retry = useCallback(async () => {
         await refresh();
     }, [refresh]);
+    
     const hasMore = Boolean(nextCursor);
 
     useEffect(() => {
@@ -120,22 +117,36 @@ export const useAuctionEvents = (options = {}) => {
         hasMore,
         loadMore,
         refresh,
-        backToLive,
         retry
     };
 };
 
-export const useRealTimeEvents = (onNewEvent) => {
+export const useRealTimeEvents = (onNewEvent, isAuthenticated = false) => {
     const wsRef = useRef(null);
     const [connected, setConnected] = useState(false);
 
     useEffect(() => {
+        if (!isAuthenticated) {
+            setConnected(false);
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
+            }
+            return;
+        }
+
         const connect = () => {
             try {
-                wsRef.current = createWebSocketConnection();
+                wsRef.current = createAuthenticatedWebSocketConnection();
 
                 wsRef.current.onopen = () => {
                     setConnected(true);
+                    const sessionId = localStorage.getItem('nounberg-session-id');
+                    const subscribeMessage = { 
+                        type: 'subscribe',
+                        sessionId: sessionId || undefined
+                    };
+                    wsRef.current?.send(JSON.stringify(subscribeMessage));
                 };
 
                 wsRef.current.onmessage = (event) => {
@@ -143,6 +154,9 @@ export const useRealTimeEvents = (onNewEvent) => {
                         const message = JSON.parse(event.data);
                         if (message.type === 'event' && message.data) {
                             onNewEvent(message.data);
+                        } else if (message.type === 'error') {
+                            console.error('WebSocket authentication error:', message.message);
+                            setConnected(false);
                         }
                     } catch (err) {
                         console.error('Error parsing WebSocket message:', err);
@@ -171,7 +185,7 @@ export const useRealTimeEvents = (onNewEvent) => {
                 wsRef.current.close();
             }
         };
-    }, [onNewEvent]);
+    }, [onNewEvent, isAuthenticated]);
 
     return connected;
 };

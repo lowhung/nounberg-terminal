@@ -25,7 +25,7 @@ export async function fetchEventsCursor(options = {}) {
         const response = await apiClient.get('/api/events', {params});
 
         return {
-            events: response.data.data || [], // API returns 'data', we rename to 'events' for compatibility
+            events: response.data.data || [],
             pagination: response.data.pagination || {},
             meta: response.data.meta || {}
         };
@@ -40,6 +40,24 @@ export async function fetchEventsCursor(options = {}) {
  * @returns {WebSocket} - WebSocket connection
  */
 export function createWebSocketConnection() {
-    const wsUrl = process.env.REACT_APP_WS_URL || 'wss://';
-    return new WebSocket(`${wsUrl}/ws`);
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+    const ws = new WebSocket(`${wsUrl}/ws`);
+
+    return ws;
+}
+
+/**
+ * Create an authenticated WebSocket connection
+ * @returns {WebSocket} - WebSocket connection with session info
+ */
+export function createAuthenticatedWebSocketConnection() {
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
+
+    const sessionId = localStorage.getItem('nounberg-session-id');
+
+    const url = sessionId 
+        ? `${wsUrl}/ws?sessionId=${encodeURIComponent(sessionId)}`
+        : `${wsUrl}/ws`;
+    
+    return new WebSocket(url);
 }

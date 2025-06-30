@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js"
   },
@@ -17,12 +17,14 @@
     "pg": "^8.16.0",
     "picocolors": "^1.1.1",
     "pino": "^8.21.0",
+    "siwe": "^3.0.0",
     "viem": "^2.21.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/ws": "^8.5.10",
-    "drizzle-kit": "^0.31.1",
+    "drizzle-kit": "^0.31.4",
+    "tsc-alias": "^1.8.8",
     "tsx": "^4.6.2",
     "typescript": "^5.2.2"
   }

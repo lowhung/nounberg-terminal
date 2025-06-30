@@ -1,15 +1,16 @@
 import {createNodeWebSocket} from '@hono/node-ws';
 import WebSocket from 'ws';
-import {transformEvent} from './models/transformers';
-import {logger} from './logger';
-import {getEventById} from "./db/auction-event";
+import {transformEvent} from '@/models/transformers';
+import {logger} from '@/logger';
+import {getEventById} from '@/db/auction-event';
 import {Client} from "pg";
 import {Hono} from "hono";
+import {getSessionById} from '@/auth';
 
 const subscribedClients = new Set<WebSocket>();
 
 type WSMessage =
-    | { type: 'subscribe' }
+    | { type: 'subscribe'; sessionId?: string }
     | { type: 'unsubscribe' }
     | { type: 'ping' }
     | { type: 'pong' };
@@ -21,7 +22,8 @@ type WSResponse =
     | { type: 'pong'; timestamp: string }
     | { type: 'ping'; timestamp: string }
     | { type: 'event'; data: any }
-    | { type: 'system'; message: string; timestamp: string };
+    | { type: 'system'; message: string; timestamp: string }
+    | { type: 'error'; message: string };
 
 function sendMessage(ws: any, message: WSResponse) {
     try {
@@ -98,16 +100,28 @@ export function setupWebSockets(app: Hono) {
         },
 
         onMessage(event, ws) {
-            const message = parseMessage(event);
+            const message: WSMessage | null = parseMessage(event);
             if (!message) return;
 
             logger.debug(`Received WebSocket message: ${JSON.stringify(message)}`);
 
             switch (message.type) {
                 case 'subscribe':
+                    const sessionId = message.sessionId || 'default';
+                    const session = getSessionById(sessionId);
+
+                    if (!session?.siwe) {
+                        logger.warn(`Unauthenticated subscription attempt for session: ${sessionId}`);
+                        sendMessage(ws, {
+                            type: 'error',
+                            message: 'Authentication required. Please connect your wallet first.'
+                        });
+                        return;
+                    }
+
                     addClient(ws);
                     sendMessage(ws, {type: 'subscribed'});
-                    logger.debug('Client subscribed to events');
+                    logger.debug(`Client subscribed to events (session: ${sessionId})`);
                     break;
 
                 case 'unsubscribe':
@@ -128,7 +142,7 @@ export function setupWebSockets(app: Hono) {
                     break;
 
                 default:
-                    logger.warn(`Unknown WebSocket message type: ${message}`);
+                    logger.warn(`Unknown WebSocket message type for message: ${message}`);
             }
         },
 
