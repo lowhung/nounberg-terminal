@@ -165,7 +165,7 @@ Makefile snippets are included below for reference.
 
 ### Internal Communication
 
-* **HTTP vs gRPC**— In production I’ve used gRPC for internal hops because the Protobuf contract gives compile‑time type‑safety, you get lean binary payloads, and built‑in streaming on a single HTTP/2 connection. The schema code‑gen (generating protobuf files) step is a extra chore, and you need to respect backwards-compatibility through appending of new fields. For this coding‑challenge prototype I kept the indexer→queue call as simple HTTP/JSON.
+* **HTTP vs gRPC**— In production I’ve used gRPC for internal hops because the Protobuf contract gives compile‑time type‑safety, you get lean binary payloads, and built‑in streaming on a single HTTP/2 connection. The schema code‑gen (generating protobuf files) step is a extra chore, and you need to respect backwards-compatibility through appending of new fields. For this prototype/Proof of Concept I kept the indexer→queue call as simple HTTP/JSON.
 
 ### Real‑Time Delivery
 
