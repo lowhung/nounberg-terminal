@@ -4,7 +4,7 @@ A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, 
 
 ---
 
-## 🏗️Architecture Overview
+## Architecture Overview
 
 ![Nounberg Terminal Architecture](./nounberg-excalidraw.png)
 
@@ -23,7 +23,7 @@ A real‑time **Nouns DAO** auction tracker that **indexes** on‑chain events, 
 
 ---
 
-## 📂 Data Model
+## Data Model
 
 All events reside in a single **`auction_events`** table keyed by the **on‑chain** `event_id` (transaction hash+log index, exposed by Ponder as `event.id`).
 
@@ -56,7 +56,7 @@ Full schema lives in `packages/indexer/ponder/schema.ts`; trimmed here for reada
 
 ---
 
-## 🗄️ Caching Strategy & Lock Management
+## Caching Strategy & Lock Management
 
 | Item          | TTL                                                                                   | LockKeyExample        |
 | ------------- | ------------------------------------------------------------------------------------- | ----------------------- |
@@ -69,7 +69,7 @@ Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first w
 
 ---
 
-## 🔄 End‑to‑End Flow
+## End‑to‑End Flow
 
 1. **Detect**— Indexer writes base row keyed by `event_id`.
 2. **Enqueue**— Job submitted to Queue API.
@@ -80,7 +80,7 @@ Workers acquire a **Redis `SETNX` lock** before external look‑ups; the first w
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 #Prepare env
@@ -99,7 +99,7 @@ make start                 # build&launch full stack
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### GET`/api/events`
 
@@ -137,7 +137,7 @@ GET localhost:3001/health            # Queue&worker pool
 
 ---
 
-## 🧪 Testing with Foundry
+## Testing with Foundry
 
 Top‑level **`make test`** orchestrates:
 
@@ -151,7 +151,7 @@ Makefile snippets are included below for reference.
 
 ---
 
-## 🧠 Architectural Notes & Take‑aways
+## Architectural Notes & Take‑aways
 
 ### Blockchain Tooling
 
@@ -191,7 +191,7 @@ Makefile snippets are included below for reference.
 
 ---
 
-## 🛠️ Makefile Commands
+## Makefile Commands
 
 Below are the **user‑facing commands** you’ll run most often; full recipes are in each Makefile.
 
